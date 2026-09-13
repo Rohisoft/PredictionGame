@@ -1,18 +1,12 @@
 # Odd/Even API (Node.js + Express + MongoDB)
 
-A standalone backend for the Odd/Even dice game, replacing the Supabase
-Postgres backend under `../supabase`. This is the same game logic — bet
-validation, atomic wallet debits, server-only dice generation, idempotent
-settlement — ported to Express + Mongoose, with custom JWT auth instead of
-Supabase Auth.
+The backend for the Odd/Even dice game — bet validation, atomic wallet
+debits, server-only dice generation, idempotent settlement — built on
+Express + Mongoose, with custom JWT auth. This project used to run on
+Supabase/Postgres; that's gone now, this is the only backend. The frontend
+(`../src`) talks to this API over plain HTTP via `../src/lib/apiClient.ts`.
 
-**This directory does not yet talk to the existing React frontend.** The
-frontend still calls Supabase directly (`src/lib/supabaseClient.ts` and the
-hooks in `src/hooks/`). Swapping the frontend over to this API — replacing
-`supabase-js` calls with `fetch`/`axios` calls to these endpoints — is a
-separate follow-up.
-
-## Why MongoDB transactions require Atlas (or a self-managed replica set)
+## Why MongoDB transactions require a replica set
 
 `placeBet`, `settleRound`, and `adminAddPoints` all use MongoDB
 multi-document transactions (`mongoose.startSession()` +
@@ -21,7 +15,9 @@ bet/transaction record it belongs to atomic — the equivalent of the
 `SELECT ... FOR UPDATE` row locking used in the Postgres version. Transactions
 require MongoDB to be running as a replica set. A standalone `mongod` does
 not support them at all. MongoDB Atlas clusters are replica sets by default,
-even on the free (M0) tier, so no extra setup is needed there.
+even on the free (M0) tier, so no extra setup is needed there for
+production. For local dev without Atlas, `docker-compose.yml` in this
+folder runs a single-node replica set for you (see below).
 
 ## Environment variables
 
@@ -29,7 +25,7 @@ even on the free (M0) tier, so no extra setup is needed there.
 cp .env.example .env
 ```
 
-- `MONGODB_URI` — Atlas connection string (or your own replica-set URI).
+- `MONGODB_URI` — see the two options below.
 - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — long random strings (`openssl rand -hex 32`).
 - `CORS_ORIGIN` — your frontend origin(s), comma-separated. Also used as the
   base URL for password-reset links.
@@ -37,6 +33,34 @@ cp .env.example .env
   the server console instead of emailed (fine for local dev).
 
 ## Local development
+
+### Option A: local MongoDB via Docker (recommended for local dev)
+
+```bash
+docker compose up -d
+```
+
+This starts a single-node MongoDB replica set on `localhost:27017` and
+initializes it automatically (the `mongo-init` service runs `rs.initiate()`
+once, then exits — safe to run every time, it just no-ops on later runs).
+`.env.example`'s default `MONGODB_URI` already points at it:
+
+```
+MONGODB_URI=mongodb://localhost:27017/prediction_game?replicaSet=rs0
+```
+
+Check it's healthy with `docker compose ps` (mongo should show `healthy`),
+or connect directly with `docker compose exec mongo mongosh`. Data persists
+in a Docker volume across restarts; `docker compose down -v` wipes it.
+
+### Option B: MongoDB Atlas
+
+Create a free (M0) cluster, grab its connection string from Atlas's
+"Connect" dialog, and use that as `MONGODB_URI` instead — see the commented
+example in `.env.example`. Needed for anything beyond local dev, since
+there's no production hosting story for a local Docker MongoDB.
+
+### Running the API
 
 ```bash
 npm install
