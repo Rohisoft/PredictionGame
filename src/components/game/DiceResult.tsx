@@ -125,18 +125,31 @@ export function DiceResult({ diceResult, winningSide, rolling }: DiceResultProps
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="[perspective:400px]" style={{ width: SIZE, height: SIZE }}>
+      <div className="relative" style={{ width: SIZE, height: SIZE + 14 }}>
         <div
-          className={cn(
-            "relative h-full w-full ease-out [transform-style:preserve-3d]",
-            rolling ? "transition-transform duration-200" : "transition-transform duration-700",
-          )}
-          style={{ transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)` }}
+          className="[perspective:400px] [filter:drop-shadow(0_10px_8px_rgba(0,0,0,0.28))_drop-shadow(0_2px_2px_rgba(0,0,0,0.15))]"
+          style={{ width: SIZE, height: SIZE }}
         >
-          {([1, 2, 3, 4, 5, 6] as const).map((value) => (
-            <DieFace key={value} value={value} placement={FACE_PLACEMENT[value]} />
-          ))}
+          <div
+            className={cn(
+              "relative h-full w-full ease-out [transform-style:preserve-3d]",
+              rolling ? "transition-transform duration-200" : "transition-transform duration-700",
+            )}
+            style={{ transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)` }}
+          >
+            {([1, 2, 3, 4, 5, 6] as const).map((value) => (
+              <DieFace key={value} value={value} placement={FACE_PLACEMENT[value]} />
+            ))}
+          </div>
         </div>
+        {/* Soft contact shadow on the "table" beneath the die. */}
+        <div
+          aria-hidden
+          className={cn(
+            "absolute left-1/2 top-full h-3 -translate-x-1/2 -translate-y-1.5 rounded-full bg-black/30 blur-sm transition-all",
+            rolling ? "w-[55%] opacity-40" : "w-[68%] opacity-60",
+          )}
+        />
       </div>
       <span className="h-5 text-center text-xs font-medium text-muted-foreground">{caption}</span>
     </div>
