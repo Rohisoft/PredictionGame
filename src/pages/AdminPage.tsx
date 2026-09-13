@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { UserRow } from "@/components/admin/UserRow";
 import { CreateUserForm } from "@/components/admin/CreateUserForm";
+import { RoundControlCard } from "@/components/admin/RoundControlCard";
 import { useProfile } from "@/hooks/useProfile";
 import { useAdminUsers } from "@/hooks/useAdmin";
 import { useWallet } from "@/hooks/useWallet";
@@ -45,6 +46,8 @@ export function AdminPage() {
           )}
         </CardContent>
       </Card>
+
+      <RoundControlCard />
 
       <Card>
         <CardHeader>

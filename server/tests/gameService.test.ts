@@ -5,7 +5,16 @@ import { Wallet } from "../src/models/Wallet.js";
 import { Bet } from "../src/models/Bet.js";
 import { GameRound } from "../src/models/GameRound.js";
 import { WalletTransaction } from "../src/models/WalletTransaction.js";
-import { placeBet, settleRound } from "../src/services/gameService.js";
+import { GameSettings, GAME_SETTINGS_ID } from "../src/models/GameSettings.js";
+import {
+  adminStartRound,
+  adminStopRound,
+  cancelRound,
+  isGameRunning,
+  placeBet,
+  settleRound,
+  tickRounds,
+} from "../src/services/gameService.js";
 
 async function makeUserWithWallet(balance = 100) {
   const username = `user${new mongoose.Types.ObjectId().toString()}`;
@@ -120,5 +129,84 @@ describe("settleRound", () => {
   it("rejects settling before the betting deadline has passed", async () => {
     const round = await GameRound.create({ roundNumber: 8, status: "betting", ...makeRoundTimes(50_000) });
     await expect(settleRound(round._id.toString())).rejects.toThrow(/deadline has not passed/);
+  });
+});
+
+describe("cancelRound", () => {
+  it("refunds every pending bet in full and marks them refunded, no dice roll", async () => {
+    const { user, wallet } = await makeUserWithWallet(100);
+    const round = await GameRound.create({ roundNumber: 100, status: "betting", ...makeRoundTimes(30_000) });
+    const bet = await Bet.create({ userId: user._id, roundId: round._id, selectedSide: "odd", amount: 40, status: "pending" });
+    await Wallet.findByIdAndUpdate(wallet._id, { $inc: { balance: -40 } });
+
+    await cancelRound(round._id.toString());
+
+    const cancelledRound = await GameRound.findById(round._id);
+    expect(cancelledRound?.status).toBe("cancelled");
+    expect(cancelledRound?.diceResult).toBeNull();
+    expect(cancelledRound?.winningSide).toBeNull();
+
+    const refreshedBet = await Bet.findById(bet._id);
+    expect(refreshedBet?.status).toBe("refunded");
+
+    const refreshedWallet = await Wallet.findById(wallet._id);
+    expect(refreshedWallet?.balance).toBe(100);
+
+    const refundTx = await WalletTransaction.findOne({ referenceId: bet._id, transactionType: "refund" });
+    expect(refundTx?.amount).toBe(40);
+  });
+
+  it("is idempotent — cancelling an already-settled round is a no-op", async () => {
+    const round = await GameRound.create({ roundNumber: 101, status: "betting", ...makeRoundTimes(-1_000) });
+    await settleRound(round._id.toString());
+
+    await cancelRound(round._id.toString());
+
+    const stillCompleted = await GameRound.findById(round._id);
+    expect(stillCompleted?.status).toBe("completed");
+  });
+});
+
+describe("game on/off switch", () => {
+  it("defaults to running when no settings document exists yet", async () => {
+    expect(await isGameRunning()).toBe(true);
+  });
+
+  it("adminStopRound switches the game off and cancels+refunds the open round", async () => {
+    const { user, wallet } = await makeUserWithWallet(100);
+    const round = await GameRound.create({ roundNumber: 102, status: "betting", ...makeRoundTimes(30_000) });
+    await Bet.create({ userId: user._id, roundId: round._id, selectedSide: "odd", amount: 25, status: "pending" });
+    await Wallet.findByIdAndUpdate(wallet._id, { $inc: { balance: -25 } });
+
+    const state = await adminStopRound();
+
+    expect(state.isGameRunning).toBe(false);
+    expect(await isGameRunning()).toBe(false);
+    const stoppedRound = await GameRound.findById(round._id);
+    expect(stoppedRound?.status).toBe("cancelled");
+    const refreshedWallet = await Wallet.findById(wallet._id);
+    expect(refreshedWallet?.balance).toBe(100);
+  });
+
+  it("adminStartRound switches the game on and opens a round if none is open", async () => {
+    await GameSettings.findByIdAndUpdate(GAME_SETTINGS_ID, { isGameRunning: false }, { upsert: true });
+
+    const state = await adminStartRound();
+
+    expect(state.isGameRunning).toBe(true);
+    expect(state.currentRound?.status).toBe("betting");
+  });
+
+  it("tickRounds still settles a due round while the switch is off, but does not open a new one", async () => {
+    await GameSettings.findByIdAndUpdate(GAME_SETTINGS_ID, { isGameRunning: false }, { upsert: true });
+    const round = await GameRound.create({ roundNumber: 103, status: "betting", ...makeRoundTimes(-1_000) });
+
+    await tickRounds();
+
+    const settled = await GameRound.findById(round._id);
+    expect(settled?.status).toBe("completed");
+
+    const openRounds = await GameRound.countDocuments({ status: "betting" });
+    expect(openRounds).toBe(0);
   });
 });

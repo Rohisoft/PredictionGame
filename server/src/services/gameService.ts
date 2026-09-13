@@ -4,6 +4,7 @@ import { GameRound, type Side } from "../models/GameRound.js";
 import { Bet } from "../models/Bet.js";
 import { Wallet } from "../models/Wallet.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
+import { GameSettings, GAME_SETTINGS_ID } from "../models/GameSettings.js";
 import { HttpError } from "../utils/asyncHandler.js";
 import { BETTING_DURATION_SECONDS, PAYOUT_MULTIPLIER, ROUND_DURATION_SECONDS, STAKE_AMOUNTS } from "../config/constants.js";
 
@@ -21,6 +22,30 @@ export function getRoundById(roundId: string) {
 
 export function getRecentRounds(limit = 20) {
   return GameRound.find({ status: "completed" }).sort({ roundNumber: -1 }).limit(limit);
+}
+
+// ---------------------------------------------------------------------------
+// Game on/off switch. Lazily created on first read so a brand-new deployment
+// defaults to "running" (the previous, always-on behaviour) without needing
+// a migration.
+// ---------------------------------------------------------------------------
+
+export async function isGameRunning() {
+  const settings = await GameSettings.findById(GAME_SETTINGS_ID);
+  return settings?.isGameRunning ?? true;
+}
+
+async function setGameRunning(running: boolean) {
+  await GameSettings.findByIdAndUpdate(
+    GAME_SETTINGS_ID,
+    { isGameRunning: running },
+    { upsert: true, setDefaultsOnInsert: true },
+  );
+}
+
+export async function getGameState() {
+  const [running, currentRound] = await Promise.all([isGameRunning(), getCurrentRound()]);
+  return { isGameRunning: running, currentRound };
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +203,64 @@ export async function settleRound(roundId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// cancelRound(): admin-triggered early stop. Unlike settleRound(), no dice
+// result is ever generated — every pending bet is refunded in full instead
+// of won/lost, since the round never ran its course. Idempotent.
+// ---------------------------------------------------------------------------
+
+export async function cancelRound(roundId: string) {
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const round = await GameRound.findById(roundId).session(session);
+      if (!round) throw new Error("Round not found");
+
+      // Idempotency guard, same spirit as settleRound()'s.
+      if (round.status !== "betting") return;
+
+      round.status = "cancelled";
+      round.completedAt = new Date();
+      await round.save({ session });
+
+      const pendingBets = await Bet.find({ roundId: round._id, status: "pending" }).session(session);
+
+      for (const bet of pendingBets) {
+        const wallet = await Wallet.findOne({ userId: bet.userId }).session(session);
+        if (!wallet) throw new Error(`Wallet not found for user ${bet.userId}`);
+
+        const updatedWallet = await Wallet.findOneAndUpdate(
+          { _id: wallet._id },
+          { $inc: { balance: bet.amount } },
+          { session, new: true },
+        );
+
+        await WalletTransaction.create(
+          [
+            {
+              userId: bet.userId,
+              walletId: wallet._id,
+              transactionType: "refund",
+              amount: bet.amount,
+              balanceBefore: wallet.balance,
+              balanceAfter: updatedWallet!.balance,
+              referenceId: bet._id,
+              description: `Refund for cancelled round #${round.roundNumber}`,
+            },
+          ],
+          { session },
+        );
+
+        bet.status = "refunded";
+        bet.settledAt = new Date();
+        await bet.save({ session });
+      }
+    });
+  } finally {
+    await session.endSession();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // createNextRound(): opens a fresh round starting now.
 // ---------------------------------------------------------------------------
 
@@ -200,8 +283,9 @@ export async function createNextRound() {
 
 // ---------------------------------------------------------------------------
 // tickRounds(): the scheduler's single entry point, run every minute (see
-// jobs/roundScheduler.ts). Settles whatever round just ended, then makes
-// sure a new betting round is open.
+// jobs/roundScheduler.ts). Settles whatever round just ended — always, so
+// bets already placed are never left unresolved — then opens a new betting
+// round only if an admin currently has the game switched on.
 // ---------------------------------------------------------------------------
 
 export async function tickRounds() {
@@ -212,8 +296,39 @@ export async function tickRounds() {
     await settleRound(round._id.toString());
   }
 
+  if (!(await isGameRunning())) return;
+
   const hasOpenRound = await GameRound.exists({ status: "betting", bettingEndTime: { $gt: now } });
   if (!hasOpenRound) {
     await createNextRound();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Admin manual controls. "Start" switches the game on and immediately opens
+// a round if none is open; "stop" switches it off and cancels (refunds) any
+// round currently taking predictions, rather than leaving it to resolve on
+// its own with no admin watching.
+// ---------------------------------------------------------------------------
+
+export async function adminStartRound() {
+  await setGameRunning(true);
+
+  const hasOpenRound = await GameRound.exists({ status: "betting", bettingEndTime: { $gt: new Date() } });
+  if (!hasOpenRound) {
+    await createNextRound();
+  }
+
+  return getGameState();
+}
+
+export async function adminStopRound() {
+  await setGameRunning(false);
+
+  const openRound = await GameRound.findOne({ status: "betting" }).sort({ roundNumber: -1 });
+  if (openRound) {
+    await cancelRound(openRound._id.toString());
+  }
+
+  return getGameState();
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
-import type { Profile, WalletTransaction } from "@/types/database";
+import type { GameRound, Profile, WalletTransaction } from "@/types/database";
 
 export type AdminUser = Profile & { balance: number };
 
@@ -84,6 +84,45 @@ export function useAdminSetPassword() {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Manual round control — any admin (or above) can pause/resume the game.
+// This is global state, not scoped to the caller's own players.
+// ---------------------------------------------------------------------------
+
+export interface GameControlState {
+  is_game_running: boolean;
+  current_round: GameRound | null;
+}
+
+export function useAdminRoundState() {
+  return useQuery({
+    queryKey: ["admin-round-state"],
+    queryFn: () => api.get<GameControlState>("/admin/rounds/state"),
+    refetchInterval: 5_000,
+  });
+}
+
+function useSetRoundState(action: "start" | "stop") {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.post<GameControlState>(`/admin/rounds/${action}`, {}),
+    onSuccess: (state) => {
+      queryClient.setQueryData(["admin-round-state"], state);
+      queryClient.invalidateQueries({ queryKey: ["current-round"] });
+      queryClient.invalidateQueries({ queryKey: ["game-running"] });
+    },
+  });
+}
+
+export function useStartRound() {
+  return useSetRoundState("start");
+}
+
+export function useStopRound() {
+  return useSetRoundState("stop");
 }
 
 // ---------------------------------------------------------------------------

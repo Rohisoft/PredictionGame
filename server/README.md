@@ -52,10 +52,11 @@ npm run dev
 ```
 
 Starts the API on `http://localhost:4000` (or `PORT`) and, in-process, a
-`node-cron` job that ticks every minute to settle the current round and open
-the next one — see `src/jobs/roundScheduler.ts`. There is no external
-scheduler dependency; as long as this process stays running, rounds keep
-advancing.
+`node-cron` job that ticks every minute — see `src/jobs/roundScheduler.ts`.
+There is no external scheduler dependency; as long as this process stays
+running, whatever round is in flight keeps settling on time. Whether a *new*
+round opens after that is gated by a simple on/off switch any admin
+controls (see below) — rounds don't advance at all while it's off.
 
 ## Role hierarchy and the points economy
 
@@ -158,11 +159,24 @@ All routes are under `/api`. Endpoints other than `/server-time` and the
 | GET | `/superadmin/admins?search=&limit=` | Superadmin only — list admin accounts with their balance |
 | POST | `/superadmin/admins` | Superadmin only — same body as `/admin/users`; creates an admin (0 starting balance) |
 | POST | `/superadmin/admins/adjust-points` | Superadmin only — `{ username, amount, description? }`; mints/debits an admin's wallet directly, no source deduction |
+| GET | `/admin/rounds/state` | Admin only — `{ is_game_running, current_round }` |
+| POST | `/admin/rounds/start` | Admin only — switches the game on and opens a round immediately if none is open |
+| POST | `/admin/rounds/stop` | Admin only — switches the game off and cancels (fully refunds) whatever round is currently taking predictions |
+| GET | `/rounds/game-state` | Any authenticated user — `{ is_game_running }`, so the game UI can show a paused banner |
 
-There's no round-settlement endpoint exposed over HTTP at all —
-`settleRound`/`createNextRound`/`tickRounds` are only ever called from
-`src/jobs/roundScheduler.ts`, never from a route handler, mirroring how the
-Postgres functions were never granted to the `authenticated` role.
+`settleRound`/`createNextRound`/`tickRounds` themselves are still never
+exposed directly over HTTP — only `src/jobs/roundScheduler.ts` calls them,
+same as before. What's new is the on/off switch (`GameSettings`, a one-row
+singleton collection) and `cancelRound`, both reachable only through the two
+admin routes above. `tickRounds()` always settles whatever round's betting
+window just closed — regardless of the switch — so a bet already placed is
+never left unresolved; it just stops opening a *next* round while the
+switch is off. `POST /admin/rounds/stop` cancels the in-flight round rather
+than letting it run out with no admin watching: every pending bet on it is
+refunded in full (`Bet.status = "refunded"`, a `refund` wallet transaction),
+no dice roll happens, and the round's own `status` becomes `"cancelled"`.
+This privilege belongs to any `admin`-or-above account, not just
+superadmins — it's global game state, not scoped to a caller's own players.
 
 ## Bootstrapping the first superadmin
 

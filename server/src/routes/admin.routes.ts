@@ -9,6 +9,7 @@ import {
   adminSetUserPassword,
   adminSuggestUsernames,
 } from "../services/adminService.js";
+import { adminStartRound, adminStopRound, getGameState } from "../services/gameService.js";
 import {
   adminAdjustPointsSchema,
   adminCreateUserSchema,
@@ -71,5 +72,35 @@ adminRouter.post(
     const { username, amount, description } = adminAdjustPointsSchema.parse(req.body);
     await adminAdjustPoints(req.userId!, username, amount, description);
     res.json({ ok: true });
+  }),
+);
+
+// -----------------------------------------------------------------------
+// Manual round control. Any admin (or above) can pause/resume the game —
+// this is global state, not scoped to the caller's own players.
+// -----------------------------------------------------------------------
+
+function serializeGameState(state: { isGameRunning: boolean; currentRound: unknown }) {
+  return { is_game_running: state.isGameRunning, current_round: state.currentRound };
+}
+
+adminRouter.get(
+  "/rounds/state",
+  asyncHandler(async (_req, res) => {
+    res.json(serializeGameState(await getGameState()));
+  }),
+);
+
+adminRouter.post(
+  "/rounds/start",
+  asyncHandler(async (_req, res) => {
+    res.json(serializeGameState(await adminStartRound()));
+  }),
+);
+
+adminRouter.post(
+  "/rounds/stop",
+  asyncHandler(async (_req, res) => {
+    res.json(serializeGameState(await adminStopRound()));
   }),
 );

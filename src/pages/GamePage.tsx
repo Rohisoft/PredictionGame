@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PauseCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,7 +9,7 @@ import { DiceResult } from "@/components/game/DiceResult";
 import { RecentResults } from "@/components/game/RecentResults";
 import { RulesPanel } from "@/components/game/RulesPanel";
 import { BalanceCard } from "@/components/wallet/BalanceCard";
-import { useCurrentRound, useRoundById } from "@/hooks/useCurrentRound";
+import { useCurrentRound, useGameRunning, useRoundById } from "@/hooks/useCurrentRound";
 import { useMyBetForRound } from "@/hooks/useMyBets";
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { useServerTick } from "@/hooks/useServerTick";
@@ -24,6 +25,7 @@ const STUCK_ROUND_MS = 20_000;
 export function GamePage() {
   const { getServerNow, synced } = useServerTimeOffset();
   const { data: latest } = useCurrentRound();
+  const { data: gameRunning } = useGameRunning();
   useBetSettlementToasts();
 
   const now = useServerTick(getServerNow, 500);
@@ -51,16 +53,23 @@ export function GamePage() {
     }
 
     if (latest.id === activeRoundId) return;
-    if (round?.status !== "completed") return; // still revealing; wait for it
+    // "cancelled" is terminal too (an admin stopped it) — nothing left to
+    // reveal, so there's no reason to hold on it the way a completed round
+    // is held to show its dice result.
+    const isTerminal = round?.status === "completed" || round?.status === "cancelled";
+    if (!isTerminal) return; // still revealing; wait for it
 
-    const timeout = setTimeout(() => setActiveRoundId(latest.id), REVEAL_HOLD_MS);
+    const timeout = setTimeout(
+      () => setActiveRoundId(latest.id),
+      round?.status === "cancelled" ? 0 : REVEAL_HOLD_MS,
+    );
     return () => clearTimeout(timeout);
   }, [latest, round, activeRoundId]);
 
   // If a round somehow never settles (e.g. the scheduler isn't running),
   // don't strand the UI on it forever once its result_time has long passed.
   useEffect(() => {
-    if (!round || round.status === "completed") return;
+    if (!round || round.status === "completed" || round.status === "cancelled") return;
     const resultDeadlineMs = new Date(round.result_time).getTime();
     if (now - resultDeadlineMs < STUCK_ROUND_MS) return;
     if (latest && latest.id !== activeRoundId) {
@@ -83,11 +92,25 @@ export function GamePage() {
   const resultEndMs = new Date(round.result_time).getTime();
   const phase = getRoundPhase(now, bettingEndMs);
   const isBetting = phase === "betting" && round.status === "betting";
-  const isRevealing = round.status !== "completed" && !isBetting;
+  const isCancelled = round.status === "cancelled";
+  const isCompleted = round.status === "completed";
+  const isRevealing = !isCancelled && !isCompleted && !isBetting;
+  // Default to true while the flag is still loading, so the paused banner
+  // doesn't flash on for a moment on every page load.
+  const isGamePaused = gameRunning?.is_game_running === false;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <BalanceCard />
+
+      {isGamePaused && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center gap-3 py-4 text-sm text-muted-foreground">
+            <PauseCircle className="h-5 w-5 shrink-0" />
+            Predictions are paused right now — an admin will resume the game shortly.
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -96,40 +119,51 @@ export function GamePage() {
             <p className="mt-1 text-sm text-muted-foreground">
               {isBetting
                 ? "Submit your prediction before the window closes"
-                : round.status === "completed"
+                : isCompleted
                   ? "Round complete"
-                  : "Predictions closed — revealing result"}
+                  : isCancelled
+                    ? "Round cancelled by admin"
+                    : "Predictions closed — revealing result"}
             </p>
           </div>
-          <Badge variant={isBetting ? "success" : "destructive"}>
-            {isBetting ? "Predictions open" : "Result phase"}
+          <Badge variant={isBetting ? "success" : isCancelled ? "outline" : "destructive"}>
+            {isBetting ? "Predictions open" : isCancelled ? "Cancelled" : "Result phase"}
           </Badge>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
-          {isBetting ? (
-            <RoundTimer
-              targetMs={bettingEndMs}
-              totalSeconds={50}
-              getServerNow={getServerNow}
-              label="Predictions close in"
-              tone="primary"
-            />
+          {isCancelled ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              This round was stopped before it finished. Every prediction on it was refunded in
+              full.
+            </p>
           ) : (
-            <RoundTimer
-              targetMs={resultEndMs}
-              totalSeconds={10}
-              getServerNow={getServerNow}
-              label="Next round in"
-              tone="destructive"
-            />
+            <>
+              {isBetting ? (
+                <RoundTimer
+                  targetMs={bettingEndMs}
+                  totalSeconds={50}
+                  getServerNow={getServerNow}
+                  label="Predictions close in"
+                  tone="primary"
+                />
+              ) : (
+                <RoundTimer
+                  targetMs={resultEndMs}
+                  totalSeconds={10}
+                  getServerNow={getServerNow}
+                  label="Next round in"
+                  tone="destructive"
+                />
+              )}
+              <DiceResult
+                diceResult={round.dice_result}
+                winningSide={round.winning_side}
+                rolling={isRevealing}
+              />
+            </>
           )}
-          <DiceResult
-            diceResult={round.dice_result}
-            winningSide={round.winning_side}
-            rolling={isRevealing}
-          />
         </CardContent>
-        {round.status === "completed" && (
+        {isCompleted && (
           <CardContent className="pt-0">
             <div
               className={cn(

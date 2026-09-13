@@ -1,9 +1,17 @@
 import { Router } from "express";
 import { asyncHandler, HttpError } from "../utils/asyncHandler.js";
 import { requireAuth } from "../middleware/auth.js";
-import { getCurrentRound, getRecentRounds, getRoundById } from "../services/gameService.js";
+import { getCurrentRound, getRecentRounds, getRoundById, isGameRunning } from "../services/gameService.js";
 
 export const roundsRouter = Router();
+
+roundsRouter.get(
+  "/game-state",
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    res.json({ is_game_running: await isGameRunning() });
+  }),
+);
 
 roundsRouter.get(
   "/current",

@@ -10,6 +10,15 @@ export function useCurrentRound() {
   });
 }
 
+/** Whether an admin currently has the game switched on — drives the "paused" banner. */
+export function useGameRunning() {
+  return useQuery({
+    queryKey: ["game-running"],
+    queryFn: () => api.get<{ is_game_running: boolean }>("/rounds/game-state"),
+    refetchInterval: 5_000,
+  });
+}
+
 export function useRecentRounds(limit = 20) {
   return useQuery({
     queryKey: ["recent-rounds", limit],

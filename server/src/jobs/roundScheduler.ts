@@ -8,6 +8,10 @@ let running = false;
  * a tick takes unexpectedly long) with a simple in-process flag — fine for
  * a single-instance deployment; running more than one instance of this
  * process would need a distributed lock instead.
+ *
+ * tickRounds() always settles whatever round is already in flight, but only
+ * opens a new one while the game's on/off switch (flipped via
+ * POST /admin/rounds/start|stop) is on — see gameService.ts.
  */
 export function startRoundScheduler() {
   const task = cron.schedule("* * * * *", async () => {
