@@ -52,11 +52,12 @@ export default {
       },
       keyframes: {
         "dice-roll": {
-          "0%": { transform: "rotate(0deg) scale(1)" },
-          "25%": { transform: "rotate(120deg) scale(1.08)" },
-          "50%": { transform: "rotate(240deg) scale(0.96)" },
-          "75%": { transform: "rotate(300deg) scale(1.05)" },
-          "100%": { transform: "rotate(360deg) scale(1)" },
+          "0%": { transform: "translateY(0) rotate(0deg) scale(1)" },
+          "20%": { transform: "translateY(-6px) rotate(90deg) scale(1.06)" },
+          "40%": { transform: "translateY(0) rotate(180deg) scale(0.95)" },
+          "60%": { transform: "translateY(-4px) rotate(240deg) scale(1.05)" },
+          "80%": { transform: "translateY(0) rotate(320deg) scale(0.97)" },
+          "100%": { transform: "translateY(0) rotate(360deg) scale(1)" },
         },
         "fade-in": {
           "0%": { opacity: "0", transform: "translateY(4px)" },
