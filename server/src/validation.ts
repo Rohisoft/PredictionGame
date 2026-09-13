@@ -1,12 +1,6 @@
 import { z } from "zod";
 import { STAKE_AMOUNTS } from "./config/constants.js";
 
-export const signupSchema = z.object({
-  email: z.string().trim().email(),
-  password: z.string().min(8),
-  fullName: z.string().trim().min(2),
-});
-
 export const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
@@ -37,4 +31,9 @@ export const adminAdjustPointsSchema = z.object({
 export const adminListUsersSchema = z.object({
   search: z.string().trim().max(200).optional(),
   limit: z.coerce.number().int().positive().max(200).optional(),
+});
+
+export const adminCreateUserSchema = z.object({
+  email: z.string().trim().email(),
+  fullName: z.string().trim().min(2),
 });

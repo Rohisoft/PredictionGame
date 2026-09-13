@@ -3,7 +3,10 @@ import { Schema, model, type InferSchemaType } from "mongoose";
 const userSchema = new Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    // null until the user sets their own password — accounts are created
+    // by an admin with no password, then activated via the password-reset
+    // flow (see authService.resetPassword).
+    passwordHash: { type: String, default: null },
     fullName: { type: String, default: null },
     isAdmin: { type: Boolean, default: false },
     // Hash of the single currently-valid refresh token, so logout / login

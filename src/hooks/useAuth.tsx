@@ -16,11 +16,6 @@ interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  signUp: (params: {
-    email: string;
-    password: string;
-    fullName: string;
-  }) => Promise<{ error: string | null }>;
   signIn: (params: {
     email: string;
     password: string;
@@ -60,15 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     user,
     loading,
-    async signUp({ email, password, fullName }) {
-      try {
-        await api.post("/auth/signup", { email, password, fullName });
-        await loadCurrentUser();
-        return { error: null };
-      } catch (err) {
-        return { error: errorMessage(err) };
-      }
-    },
     async signIn({ email, password }) {
       try {
         await api.post("/auth/login", { email, password });

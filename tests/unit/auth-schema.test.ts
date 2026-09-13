@@ -1,39 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loginSchema, resetPasswordSchema, signupSchema } from "@/schemas/auth";
-
-describe("signupSchema", () => {
-  const base = {
-    fullName: "Jane Doe",
-    email: "jane@example.com",
-    password: "supersecret1",
-    confirmPassword: "supersecret1",
-    ageConfirmed: true as const,
-  };
-
-  it("accepts a fully valid signup", () => {
-    expect(signupSchema.safeParse(base).success).toBe(true);
-  });
-
-  it("rejects mismatched passwords", () => {
-    const result = signupSchema.safeParse({ ...base, confirmPassword: "different" });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects a password shorter than 8 characters", () => {
-    const result = signupSchema.safeParse({ ...base, password: "short", confirmPassword: "short" });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects signup when the age confirmation checkbox is unchecked", () => {
-    const result = signupSchema.safeParse({ ...base, ageConfirmed: false });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects an invalid email", () => {
-    const result = signupSchema.safeParse({ ...base, email: "not-an-email" });
-    expect(result.success).toBe(false);
-  });
-});
+import { loginSchema, resetPasswordSchema } from "@/schemas/auth";
 
 describe("loginSchema", () => {
   it("requires a valid email and a non-empty password", () => {

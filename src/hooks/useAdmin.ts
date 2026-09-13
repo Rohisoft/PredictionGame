@@ -40,3 +40,19 @@ export function useAdminAdjustPoints() {
     },
   });
 }
+
+interface CreateUserParams {
+  email: string;
+  fullName: string;
+}
+
+export function useAdminCreateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: CreateUserParams) => api.post<Profile>("/admin/users", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+}

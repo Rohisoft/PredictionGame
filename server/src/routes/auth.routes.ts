@@ -3,20 +3,14 @@ import { asyncHandler, HttpError } from "../utils/asyncHandler.js";
 import { setAuthCookies, clearAuthCookies } from "../utils/cookies.js";
 import { requireAuth } from "../middleware/auth.js";
 import * as authService from "../services/authService.js";
-import { forgotPasswordSchema, loginSchema, resetPasswordSchema, signupSchema } from "../validation.js";
+import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "../validation.js";
 import { env } from "../config/env.js";
 
 export const authRouter = Router();
 
-authRouter.post(
-  "/signup",
-  asyncHandler(async (req, res) => {
-    const { email, password, fullName } = signupSchema.parse(req.body);
-    const { userId, accessToken, refreshToken } = await authService.signup(email, password, fullName);
-    setAuthCookies(res, accessToken, refreshToken);
-    res.status(201).json({ userId });
-  }),
-);
+// No public self-signup — accounts are created by an admin (see
+// POST /admin/users) and activated by the person themselves via
+// "forgot password", since a fresh account has no password at all yet.
 
 authRouter.post(
   "/login",

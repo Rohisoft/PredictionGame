@@ -3,12 +3,27 @@ import { User } from "../models/User.js";
 import { Wallet } from "../models/Wallet.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
 import { HttpError } from "../utils/asyncHandler.js";
+import { createUserAccount } from "./authService.js";
 
 async function requireAdminUser(adminUserId: string) {
   const admin = await User.findById(adminUserId).select("isAdmin");
   if (!admin?.isAdmin) {
     throw new HttpError(403, "Not authorized");
   }
+}
+
+/**
+ * Admin-only account creation: no password is set here at all. The person
+ * activates their own account later by running the password-reset flow for
+ * their email (there's no separate "activation token" system — setting a
+ * password from null is the same operation resetPassword() already does
+ * for an existing password).
+ */
+export async function adminCreateUser(adminUserId: string, email: string, fullName: string) {
+  await requireAdminUser(adminUserId);
+  const userId = await createUserAccount(email, fullName, null);
+  const user = await User.findById(userId).select("email fullName isAdmin createdAt updatedAt");
+  return user;
 }
 
 /**

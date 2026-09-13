@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserRow } from "@/components/admin/UserRow";
+import { CreateUserForm } from "@/components/admin/CreateUserForm";
 import { useProfile } from "@/hooks/useProfile";
 import { useAdminUsers } from "@/hooks/useAdmin";
 
@@ -23,6 +24,22 @@ export function AdminPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <UserPlus className="h-6 w-6 text-primary" />
+            <CardTitle>Create an account</CardTitle>
+          </div>
+          <CardDescription>
+            There's no public sign-up — every account starts here. The person sets their own
+            password afterward using "Forgot password" on the sign-in page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreateUserForm />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

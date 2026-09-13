@@ -69,10 +69,11 @@ export function LoginPage() {
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            New here?{" "}
-            <Link to="/signup" className="font-medium text-primary hover:underline">
-              Create an account
-            </Link>
+            First time signing in? Use{" "}
+            <Link to="/forgot-password" className="font-medium text-primary hover:underline">
+              Forgot password
+            </Link>{" "}
+            with your email to set one — accounts are created by an admin.
           </p>
         </CardContent>
       </Card>

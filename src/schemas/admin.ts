@@ -10,3 +10,10 @@ export const adminAdjustPointsSchema = z.object({
 });
 
 export type AdminAdjustPointsInput = z.infer<typeof adminAdjustPointsSchema>;
+
+export const adminCreateUserSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address"),
+  fullName: z.string().trim().min(2, "Enter a full name"),
+});
+
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;

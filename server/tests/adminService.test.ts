@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { User } from "../src/models/User.js";
 import { Wallet } from "../src/models/Wallet.js";
 import { WalletTransaction } from "../src/models/WalletTransaction.js";
-import { adminAdjustPoints, adminGetUserTransactions, adminListUsers } from "../src/services/adminService.js";
+import {
+  adminAdjustPoints,
+  adminCreateUser,
+  adminGetUserTransactions,
+  adminListUsers,
+} from "../src/services/adminService.js";
 
 async function makeUser(email: string, { isAdmin = false, balance = 100 } = {}) {
   const user = await User.create({ email, passwordHash: "x", isAdmin, fullName: "Test User" });
@@ -92,5 +97,36 @@ describe("adminGetUserTransactions", () => {
     const history = await adminGetUserTransactions(admin._id.toString(), target._id.toString(), 20);
     expect(history).toHaveLength(1);
     expect(history[0]).toMatchObject({ amount: 25, description: "top up" });
+  });
+});
+
+describe("adminCreateUser", () => {
+  it("creates a user with no password and the welcome bonus", async () => {
+    const { user: admin } = await makeUser("admin7@test.local", { isAdmin: true });
+
+    const created = await adminCreateUser(admin._id.toString(), "newperson@test.local", "New Person");
+    expect(created?.email).toBe("newperson@test.local");
+
+    const rawUser = await User.findOne({ email: "newperson@test.local" });
+    expect(rawUser?.passwordHash).toBeNull();
+
+    const wallet = await Wallet.findOne({ userId: rawUser?._id });
+    expect(wallet?.balance).toBe(100);
+  });
+
+  it("rejects a non-admin caller", async () => {
+    const { user: caller } = await makeUser("notadmin2@test.local");
+    await expect(adminCreateUser(caller._id.toString(), "x@test.local", "X")).rejects.toThrow(
+      /Not authorized/,
+    );
+  });
+
+  it("rejects creating a user with an email that already exists", async () => {
+    const { user: admin } = await makeUser("admin8@test.local", { isAdmin: true });
+    await makeUser("dupe@test.local");
+
+    await expect(adminCreateUser(admin._id.toString(), "dupe@test.local", "Dupe")).rejects.toThrow(
+      /already exists/,
+    );
   });
 });

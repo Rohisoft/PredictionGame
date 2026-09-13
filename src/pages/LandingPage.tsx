@@ -54,20 +54,9 @@ export function LandingPage() {
             <span>Odd/Even</span>
           </div>
           <nav className="flex items-center gap-2">
-            {user ? (
-              <Button asChild size="sm">
-                <Link to="/play">Continue to game</Link>
-              </Button>
-            ) : (
-              <>
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/login">Sign in</Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link to="/signup">Sign up</Link>
-                </Button>
-              </>
-            )}
+            <Button asChild size="sm">
+              <Link to={user ? "/play" : "/login"}>{user ? "Continue to game" : "Sign in"}</Link>
+            </Button>
           </nav>
         </div>
       </header>
@@ -88,14 +77,18 @@ export function LandingPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
-              <Link to={user ? "/play" : "/signup"}>
-                {user ? "Continue to game" : "Play now — get 100 free points"}
-              </Link>
+              <Link to={user ? "/play" : "/login"}>{user ? "Continue to game" : "Sign in to play"}</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
               <a href="#how-it-works">See how it works</a>
             </Button>
           </div>
+          {!user && (
+            <p className="text-sm text-muted-foreground">
+              New here? Accounts are created by an admin — ask them for access, then use
+              "Forgot password" on the sign-in page to set your own password.
+            </p>
+          )}
         </div>
       </section>
 
@@ -141,9 +134,7 @@ export function LandingPage() {
           </div>
           <div className="mt-8 flex justify-center">
             <Button asChild size="lg">
-              <Link to={user ? "/play" : "/signup"}>
-                {user ? "Continue to game" : "Sign up to play"}
-              </Link>
+              <Link to={user ? "/play" : "/login"}>{user ? "Continue to game" : "Sign in to play"}</Link>
             </Button>
           </div>
         </div>

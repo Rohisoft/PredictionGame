@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
-import { adminAdjustPoints, adminGetUserTransactions, adminListUsers } from "../services/adminService.js";
-import { adminAdjustPointsSchema, adminListUsersSchema } from "../validation.js";
+import {
+  adminAdjustPoints,
+  adminCreateUser,
+  adminGetUserTransactions,
+  adminListUsers,
+} from "../services/adminService.js";
+import { adminAdjustPointsSchema, adminCreateUserSchema, adminListUsersSchema } from "../validation.js";
 
 export const adminRouter = Router();
 
@@ -14,6 +19,15 @@ adminRouter.get(
     const { search, limit } = adminListUsersSchema.parse(req.query);
     const users = await adminListUsers(req.userId!, search, limit ?? 50);
     res.json(users);
+  }),
+);
+
+adminRouter.post(
+  "/users",
+  asyncHandler(async (req, res) => {
+    const { email, fullName } = adminCreateUserSchema.parse(req.body);
+    const user = await adminCreateUser(req.userId!, email, fullName);
+    res.status(201).json(user);
   }),
 );
 

@@ -16,13 +16,18 @@ async function issueSession(userId: string) {
   return { accessToken, refreshToken };
 }
 
-export async function signup(email: string, password: string, fullName: string) {
+/**
+ * Creates a user + wallet (with the welcome bonus) in one transaction.
+ * `passwordHash` is null for admin-created accounts — the person activates
+ * it themselves later via the password-reset flow (see resetPassword()
+ * below; there's nothing activation-specific about it, setting a password
+ * from null is the same operation as changing an existing one).
+ */
+export async function createUserAccount(email: string, fullName: string, passwordHash: string | null) {
   const existing = await User.findOne({ email: email.toLowerCase() });
   if (existing) {
     throw new HttpError(409, "An account with that email already exists");
   }
-
-  const passwordHash = await hashPassword(password);
 
   const session = await mongoose.startSession();
   try {
@@ -48,8 +53,7 @@ export async function signup(email: string, password: string, fullName: string) 
       userId = user._id.toString();
     });
 
-    const tokens = await issueSession(userId);
-    return { userId, ...tokens };
+    return userId;
   } finally {
     await session.endSession();
   }
@@ -57,7 +61,13 @@ export async function signup(email: string, password: string, fullName: string) 
 
 export async function login(email: string, password: string) {
   const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  if (!user) {
+    throw new HttpError(401, "Invalid email or password");
+  }
+  if (!user.passwordHash) {
+    throw new HttpError(401, "This account doesn't have a password yet — use \"Forgot password\" to set one");
+  }
+  if (!(await verifyPassword(password, user.passwordHash))) {
     throw new HttpError(401, "Invalid email or password");
   }
 

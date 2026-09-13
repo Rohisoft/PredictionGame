@@ -59,12 +59,20 @@ advancing.
 
 ## Auth model
 
-Custom JWT auth, no external auth provider:
+Custom JWT auth, no external auth provider, **no public self-signup**:
+accounts are created by an admin (`POST /admin/users`, email + full name,
+no password) and the person activates their own account by running the
+"forgot password" flow for their email — there's no separate activation
+token system; setting a password from `null` is the same operation as
+resetting an existing one (`authService.resetPassword`). Logging in
+against an account with no password yet fails with a distinct message
+telling the person to use "forgot password" instead of a generic
+invalid-credentials error.
 
 - Passwords hashed with bcrypt (12 rounds).
-- On login/signup, an access token (short-lived) and refresh token
-  (long-lived) are issued as `httpOnly` cookies — not returned in the
-  response body, so they're not reachable from frontend JS (XSS-resistant).
+- On login, an access token (short-lived) and refresh token (long-lived)
+  are issued as `httpOnly` cookies — not returned in the response body, so
+  they're not reachable from frontend JS (XSS-resistant).
 - A hash of the current refresh token is stored on the user document
   (`refreshTokenHash`); `/api/auth/refresh` checks the presented token's hash
   against it. This is what lets `/api/auth/logout` and a password reset
@@ -83,8 +91,7 @@ All routes are under `/api`. Endpoints other than `/server-time` and the
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/server-time` | For the frontend's clock-offset countdown sync |
-| POST | `/auth/signup` | `{ email, password, fullName }` — creates user + wallet + 100pt bonus |
-| POST | `/auth/login` | `{ email, password }` |
+| POST | `/auth/login` | `{ email, password }` — fails with a distinct message if the account has no password set yet |
 | POST | `/auth/refresh` | Rotates the access/refresh cookies |
 | POST | `/auth/logout` | Auth required |
 | POST | `/auth/forgot-password` | `{ email }` — always returns `{ ok: true }`, doesn't leak whether the email exists |
@@ -99,6 +106,7 @@ All routes are under `/api`. Endpoints other than `/server-time` and the
 | GET | `/bets/mine?limit=50` | Bet history, with round populated |
 | GET | `/bets/mine/round/:roundId` | This user's bet (if any) on a specific round |
 | GET | `/admin/users?search=&limit=` | Admin only — list users with their wallet balance |
+| POST | `/admin/users` | Admin only — `{ email, fullName }`, creates user + wallet + 100pt bonus, no password set |
 | GET | `/admin/users/:id/transactions` | Admin only — a specific user's transaction history |
 | POST | `/admin/adjust-points` | Admin only — `{ userEmail, amount, description? }`; positive credits, negative debits (never below zero) |
 
@@ -107,14 +115,34 @@ There's no round-settlement endpoint exposed over HTTP at all —
 `src/jobs/roundScheduler.ts`, never from a route handler, mirroring how the
 Postgres functions were never granted to the `authenticated` role.
 
-## Promoting an admin
+## Bootstrapping the first admin
 
-No self-serve promotion endpoint, by design — same as the Supabase version.
-Flip it directly in the database:
+`POST /admin/users` (creating an account) requires an existing admin — so
+the very first admin has to be created directly in the database once, the
+same way `adminCreateUser` would: insert the user (no password), a wallet
+with the welcome bonus, and set `isAdmin: true`.
 
 ```js
-db.users.updateOne({ email: "you@example.com" }, { $set: { isAdmin: true } })
+// mongosh, against the app's database
+const userId = new ObjectId();
+db.users.insertOne({
+  _id: userId,
+  email: "you@example.com",
+  fullName: "Admin",
+  isAdmin: true,
+  passwordHash: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+db.wallets.insertOne({ userId, balance: 100, createdAt: new Date(), updatedAt: new Date() });
 ```
+
+Then use the app's "Forgot password" flow for `you@example.com` to set a
+password (the reset link is logged to the server console unless SMTP is
+configured — see the environment variables above). From then on, that
+account can create every other user via the admin page, and promote
+further admins the same way if it ever needs to (no self-serve promotion
+endpoint, by design — flip `isAdmin` directly in the database for that).
 
 ## Testing
 
@@ -127,9 +155,10 @@ reason production needs Atlas — transactions) so `placeBet`/`settleRound`
 run against a real, disposable MongoDB rather than mocks. Covers: invalid
 stake rejection, insufficient-balance rejection, betting-after-deadline
 rejection, duplicate-bet-per-round rejection, win/loss payout math,
-settlement idempotency, signup's wallet+bonus creation, login success/failure,
-and the password-reset flow (including that resetting invalidates the old
-password).
+settlement idempotency, account creation's wallet+bonus setup, login
+success/failure (including the no-password-yet case), the password-reset /
+first-time-activation flow, and admin user management (listing, search,
+credit/debit with the below-zero guard, account creation).
 
 The first run downloads a MongoDB binary for `mongodb-memory-server` — this
 needs network access and may be slow or fail in a sandboxed/offline CI
