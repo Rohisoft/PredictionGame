@@ -187,6 +187,16 @@ database once: insert the user with a bcrypt hash of a password you pick,
 superadmin, since giving points to an admin is a mint, not a transfer —
 0 is fine).
 
+**Easiest way — no `mongosh` install required**, using the same
+mongoose/bcryptjs already in this project's `node_modules`:
+
+```bash
+cd server
+node scripts/bootstrap-superadmin.js "<MONGODB_URI>" "<username>" "<password>" ["<full name>"]
+```
+
+Or by hand in `mongosh` against the app's database, if you prefer:
+
 ```js
 // In Node, first hash a password: require("bcryptjs").hashSync("your-temp-password", 12)
 // Then, in mongosh against the app's database:
