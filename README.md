@@ -11,25 +11,28 @@ welcome bonus so the game is playable immediately.
 
 All security- and fairness-critical logic — bet validation, wallet debits,
 dice generation, and settlement — lives on the backend, never in the
-frontend.
+frontend. See [`server/src/services/gameService.ts`](server/src/services/gameService.ts).
 
-There are now **two backend implementations** in this repo:
+## Repo layout
 
-- `supabase/` — the original Postgres/Supabase backend (SQL functions, RLS,
-  pg_cron). The frontend in `src/` currently talks to this one via
-  `supabase-js`. See [`supabase/migrations/0003_functions.sql`](supabase/migrations/0003_functions.sql).
-- `server/` — a from-scratch Node.js/Express + MongoDB backend with the same
-  game logic and custom JWT auth (no Supabase dependency). See
-  [`server/README.md`](server/README.md). **The frontend does not talk to
-  this one yet** — wiring `src/` up to call this API instead of Supabase is
-  a separate follow-up.
+This is two projects in one repo:
+
+- `/` (this directory) — the React frontend.
+- `server/` — a Node.js/Express + MongoDB API. **Read [`server/README.md`](server/README.md)**
+  for how its auth, transactions, and round scheduler work — this file only
+  covers the frontend and how the two fit together.
+
+There is no Supabase/Postgres anywhere in this repo anymore — the project
+started on Supabase and was fully migrated to the Node/MongoDB backend
+described above.
 
 ## Tech stack
 
-- React + Vite + TypeScript, Tailwind CSS, shadcn/ui-style components
-- TanStack Query for data fetching/caching, Zod + react-hook-form for forms
-- Supabase: Postgres, Auth, Realtime, Row Level Security, pg_cron
-- Netlify for static hosting
+- **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui-style
+  components, TanStack Query, Zod + react-hook-form
+- **Backend**: Node.js + Express + Mongoose (MongoDB), custom JWT auth
+- **Hosting**: Netlify (frontend, static) + anywhere that keeps a process
+  alive (backend — Render/Railway/Fly.io/a VPS/etc.; see `server/README.md`)
 
 ## How the game works
 
@@ -45,110 +48,84 @@ There are now **two backend implementations** in this repo:
 ## Fairness & security model
 
 - **Dice generation happens once, server-side, after the betting deadline.**
-  `settle_round()` (a Postgres `SECURITY DEFINER` function) generates the
-  result with Postgres's own RNG only after `betting_end_time` has passed —
-  it has no way to see or react to how much was staked on either side, and
-  it's idempotent (safe to call more than once for the same round).
-- **Round scheduling has no external server.** A single function,
-  `tick_rounds()`, is scheduled every minute via `pg_cron`. It settles any
-  round whose betting window just closed and opens the next one. This
-  function — along with `settle_round()` and `create_next_round()` — is
-  **not** granted to the `authenticated` or `anon` roles, so it can only run
-  as the elevated role `pg_cron` uses, never from the client.
-- **Bets are placed through one function, `place_bet()`,** which re-checks
+  `settleRound()` generates the result with Node's CSPRNG (`crypto.randomInt`)
+  only after `bettingEndTime` has passed — it has no way to see or react to
+  how much was staked on either side, and it's idempotent (safe to call more
+  than once for the same round).
+- **Round scheduling has no external dependency.** A `node-cron` job inside
+  the API process ticks every minute, settling any round whose betting
+  window just closed and opening the next one (`server/src/jobs/roundScheduler.ts`).
+  Settlement is never exposed over HTTP — there's no route for it at all,
+  only the in-process scheduler can trigger it.
+- **Bets are placed through one function, `placeBet()`,** which re-checks
   (server-side, regardless of what the UI shows) that the round is still in
   its betting window, the stake is one of the four allowed amounts, and the
   wallet has sufficient balance — then debits the wallet and inserts the bet
-  atomically, row-locking the wallet to prevent a race from double-spending
-  a balance.
-- **Row Level Security** is enabled on every user-facing table. Users can
-  only ever `SELECT` their own wallet, transactions, and bets; there are no
-  client-side `INSERT`/`UPDATE`/`DELETE` policies on those tables at all —
-  every write goes through a `SECURITY DEFINER` function.
-- **Admin point grants** go through `admin_add_points()`, which checks the
-  caller's own `profiles.is_admin` flag server-side before crediting anyone
-  — the admin page in the UI is just a convenience; the real check is in the
-  database.
+  atomically inside a MongoDB transaction, so a race can't double-spend a
+  balance.
+- **Every route scopes queries to the requesting user** (`req.userId` from
+  the verified JWT) — there's no database-level access control like
+  Postgres RLS here, so this scoping is enforced in each route/service
+  function instead. See `server/README.md` for specifics.
+- **Admin point grants** go through `adminAddPoints()`, which checks the
+  caller's own `isAdmin` flag server-side before crediting anyone — the
+  admin page in the UI is just a convenience; the real check is in the API.
 
 ## Project structure
 
 ```
 src/
   components/   UI primitives (ui/), layout, game, wallet, admin components
-  hooks/        Auth, wallet, round, bet data hooks (React Query + Realtime)
-  lib/          Supabase client, server-time sync, query client, utils
+  hooks/        Auth, wallet, round, bet data hooks (React Query + polling)
+  lib/          API client (fetch + cookies), server-time sync, query client, utils
   pages/        Route-level pages
   schemas/      Zod validation schemas
-  types/        Hand-written row types matching the Postgres schema
-supabase/
-  migrations/   SQL migrations: schema -> RLS -> functions -> cron
-  tests/database/  pgTAP tests for the database layer
+  types/        Row types matching the API's JSON response shape
 tests/unit/     Vitest unit tests (schemas, timer/phase math)
+server/         Node.js/Express + MongoDB API — see server/README.md
 ```
 
 ## Local development
 
-### 1. Install dependencies
+You need **two processes running**: the API (`server/`) and the frontend
+(this directory). They talk over plain HTTP with cookie-based auth — no
+shared code or build step links them.
+
+### 1. Start the API
+
+Follow [`server/README.md`](server/README.md) first: set up MongoDB Atlas
+(or your own replica set), configure `server/.env`, then from `server/`:
 
 ```bash
 npm install
+npm run dev
 ```
 
-### 2. Create a Supabase project
+This serves the API at `http://localhost:4000` and starts the in-process
+round scheduler.
 
-Create a free project at [supabase.com](https://supabase.com), or run the
-stack locally with the Supabase CLI:
-
-```bash
-npm install -g supabase   # or: brew install supabase/tap/supabase
-supabase start
-```
-
-`supabase start` prints a local API URL and anon key you can use for step 3.
-
-### 3. Configure environment variables
+### 2. Configure and start the frontend
 
 ```bash
+npm install
 cp .env.example .env
 ```
 
-Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from your project's
-Settings → API page (or from `supabase start`'s output for local dev).
-**Never** put the `service_role` key in this file — it must never reach the
-frontend.
-
-### 4. Apply database migrations
-
-Against a local stack, migrations in `supabase/migrations/` are applied
-automatically by `supabase start`. Against a hosted project, link it and
-push:
-
-```bash
-supabase link --project-ref <your-project-ref>
-supabase db push
-```
-
-> **Heads up on `pg_cron`:** [`0004_cron.sql`](supabase/migrations/0004_cron.sql)
-> runs `create extension if not exists pg_cron;`. On some hosted Supabase
-> plans this extension must first be turned on via **Dashboard → Database →
-> Extensions** before the migration will apply cleanly. Local dev via the
-> CLI does not have this restriction.
-
-### 5. Promote an admin (optional)
-
-There's no self-serve admin promotion UI by design. After signing up, run
-this once in the SQL editor (or `supabase db execute` locally) for whichever
-account should be able to grant points:
-
-```sql
-update profiles set is_admin = true where email = 'you@example.com';
-```
-
-### 6. Run the app
+`.env` just needs `VITE_API_URL` pointing at the API (`http://localhost:4000/api`
+for the setup above). Then:
 
 ```bash
 npm run dev
 ```
+
+Open the printed URL (usually `http://localhost:5173`), sign up, and you
+should land on the game page with a 100-point welcome bonus.
+
+### Promoting an admin
+
+No self-serve promotion UI, by design. After signing up, flip the flag
+directly in MongoDB for whichever account should be able to grant points —
+see `server/README.md`.
 
 ## Testing
 
@@ -161,49 +138,43 @@ npm run test
 Covers Zod schema validation (stake amounts, admin point grants, auth forms)
 and the pure round-phase/countdown math used by the timer.
 
-### Database tests (pgTAP)
-
-Requires the Supabase CLI and Docker (`supabase start` running):
+### Backend tests
 
 ```bash
-supabase test db
+cd server && npm run test
 ```
 
-[`supabase/tests/database/`](supabase/tests/database) covers:
-
-- Schema shape: tables, primary keys, indexes, the non-negative balance
-  check, and the one-bet-per-user-per-round unique constraint.
-- `place_bet()`: rejects invalid stakes, rejects betting after the deadline,
-  rejects insufficient balance, rejects a second bet on the same round,
-  rejects unauthenticated calls, and correctly debits the wallet on success.
-- `settle_round()`: cannot be called by an authenticated client (only the
-  elevated cron role), generates a dice result once, pays the winning side
-  2× stake, leaves the losing side at zero, and is safe to call twice
-  without double-paying (idempotency).
-- Row Level Security: a user cannot read another user's wallet or bets.
+Runs against a real MongoDB replica set (via `mongodb-memory-server`), not
+mocks — see `server/README.md` for exactly what's covered (bet validation,
+settlement payout math and idempotency, auth/password-reset, and the JSON
+serialization shape each model produces).
 
 ### What isn't automated here
 
 Mobile responsiveness and the full signup → bet → settlement flow are best
 verified manually in a browser (`npm run dev`, then resize/use device
-emulation). Concurrent bet placement is guarded at the database level by
-row-locking the wallet inside `place_bet()`, but isn't exercised by an
-automated load test in this repo.
+emulation). A one-off manual smoke test of the real HTTP layer (cookies,
+CORS, the full signup → bet → logout flow via curl) was run during
+development but isn't part of the repeatable test suite.
 
-## Deployment (Netlify)
+## Deployment
+
+**Frontend (Netlify):**
 
 1. Push this repo to GitHub/GitLab/Bitbucket and import it in Netlify, or
    run `netlify deploy` from the CLI.
 2. Netlify reads [`netlify.toml`](netlify.toml) for the build command
    (`npm run build`), publish directory (`dist`), and the SPA redirect rule
    that sends all routes to `index.html` for React Router.
-3. In Netlify's Site settings → Environment variables, add:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+3. In Netlify's Site settings → Environment variables, add `VITE_API_URL`
+   pointing at your deployed API's URL (e.g. `https://api.yourapp.com/api`).
+4. Trigger a deploy.
 
-   Only the anon key — never the `service_role` key.
-4. Trigger a deploy. That's it; there's no separate backend to deploy since
-   all backend logic lives in Supabase (Postgres functions + pg_cron).
+**Backend:** deploy `server/` anywhere that keeps a Node process running
+(the round scheduler needs that) — see `server/README.md`'s "hosting" note.
+Set `CORS_ORIGIN` on the API to your Netlify URL so cookies are accepted
+cross-site, and make sure `NODE_ENV=production` there so auth cookies get
+`Secure; SameSite=None`.
 
 ## Responsible play
 

@@ -1,4 +1,5 @@
 import { Schema, model, Types } from "mongoose";
+import { idOf } from "../utils/serialize.js";
 
 export const TRANSACTION_TYPES = ["deposit", "withdrawal", "bet", "payout", "refund", "adjustment"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
@@ -18,5 +19,22 @@ const walletTransactionSchema = new Schema(
 );
 
 walletTransactionSchema.index({ createdAt: -1 });
+
+walletTransactionSchema.set("toJSON", {
+  transform(_doc, ret) {
+    return {
+      id: ret._id.toString(),
+      user_id: idOf(ret.userId),
+      wallet_id: idOf(ret.walletId),
+      transaction_type: ret.transactionType,
+      amount: ret.amount,
+      balance_before: ret.balanceBefore,
+      balance_after: ret.balanceAfter,
+      reference_id: ret.referenceId ? idOf(ret.referenceId) : null,
+      description: ret.description ?? null,
+      created_at: ret.createdAt,
+    };
+  },
+});
 
 export const WalletTransaction = model("WalletTransaction", walletTransactionSchema);

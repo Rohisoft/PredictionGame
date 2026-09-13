@@ -2,7 +2,7 @@ import { z } from "zod";
 import { STAKE_AMOUNTS } from "@/types/game";
 
 export const betSchema = z.object({
-  roundId: z.string().uuid(),
+  roundId: z.string().min(1, "A round is required"),
   selectedSide: z.enum(["odd", "even"]),
   amount: z.number().refine((v) => STAKE_AMOUNTS.includes(v as 10 | 20 | 50 | 100), {
     message: `Stake must be one of ${STAKE_AMOUNTS.join(", ")}`,

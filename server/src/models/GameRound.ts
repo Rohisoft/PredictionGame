@@ -22,4 +22,21 @@ const gameRoundSchema = new Schema(
 
 gameRoundSchema.index({ roundNumber: -1 });
 
+gameRoundSchema.set("toJSON", {
+  transform(_doc, ret) {
+    return {
+      id: ret._id.toString(),
+      round_number: ret.roundNumber,
+      status: ret.status,
+      betting_start_time: ret.bettingStartTime,
+      betting_end_time: ret.bettingEndTime,
+      result_time: ret.resultTime,
+      dice_result: ret.diceResult ?? null,
+      winning_side: ret.winningSide ?? null,
+      created_at: ret.createdAt,
+      completed_at: ret.completedAt ?? null,
+    };
+  },
+});
+
 export const GameRound = model("GameRound", gameRoundSchema);

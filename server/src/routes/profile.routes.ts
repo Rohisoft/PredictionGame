@@ -9,14 +9,8 @@ profileRouter.get(
   "/",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const user = await User.findById(req.userId).select("email fullName isAdmin createdAt");
+    const user = await User.findById(req.userId).select("email fullName isAdmin createdAt updatedAt");
     if (!user) throw new HttpError(404, "User not found");
-    res.json({
-      id: user._id,
-      email: user.email,
-      fullName: user.fullName,
-      isAdmin: user.isAdmin,
-      createdAt: user.createdAt,
-    });
+    res.json(user);
   }),
 );

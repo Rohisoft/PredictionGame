@@ -1,46 +1,19 @@
-import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabaseClient";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
 import type { Wallet, WalletTransaction } from "@/types/database";
 
 export function useWallet() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  const query = useQuery({
+  return useQuery({
     queryKey: ["wallet", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wallets")
-        .select("*")
-        .eq("user_id", user!.id)
-        .single();
-      if (error) throw error;
-      return data as Wallet;
-    },
+    queryFn: () => api.get<Wallet>("/wallet"),
+    // No realtime backend here — poll so a settlement's payout shows up
+    // without the user having to manually refresh.
+    refetchInterval: 5_000,
   });
-
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`wallet-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["wallet", user.id] });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
-
-  return query;
 }
 
 export function useWalletTransactions() {
@@ -49,15 +22,7 @@ export function useWalletTransactions() {
   return useQuery({
     queryKey: ["wallet-transactions", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wallet_transactions")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data as WalletTransaction[];
-    },
+    queryFn: () => api.get<WalletTransaction[]>("/wallet/transactions"),
+    refetchInterval: 10_000,
   });
 }

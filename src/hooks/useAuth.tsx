@@ -1,16 +1,20 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
   type ReactNode,
 } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabaseClient";
+import { api, ApiError, AUTH_EXPIRED_EVENT } from "@/lib/apiClient";
+
+interface AuthUser {
+  id: string;
+  email: string;
+}
 
 interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   signUp: (params: {
     email: string;
@@ -23,57 +27,79 @@ interface AuthContextValue {
   }) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<{ error: string | null }>;
-  updatePassword: (password: string) => Promise<{ error: string | null }>;
+  resetPassword: (token: string, password: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function errorMessage(err: unknown): string {
+  return err instanceof ApiError ? err.message : "Something went wrong";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setLoading(false);
-    });
-
-    return () => listener.subscription.unsubscribe();
+  const loadCurrentUser = useCallback(async () => {
+    try {
+      const profile = await api.get<{ id: string; email: string }>("/profile");
+      setUser({ id: profile.id, email: profile.email });
+    } catch {
+      setUser(null);
+    }
   }, []);
 
+  useEffect(() => {
+    loadCurrentUser().finally(() => setLoading(false));
+
+    const onExpired = () => setUser(null);
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+  }, [loadCurrentUser]);
+
   const value: AuthContextValue = {
-    session,
-    user: session?.user ?? null,
+    user,
     loading,
     async signUp({ email, password, fullName }) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
-      });
-      return { error: error?.message ?? null };
+      try {
+        await api.post("/auth/signup", { email, password, fullName });
+        await loadCurrentUser();
+        return { error: null };
+      } catch (err) {
+        return { error: errorMessage(err) };
+      }
     },
     async signIn({ email, password }) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error?.message ?? null };
+      try {
+        await api.post("/auth/login", { email, password });
+        await loadCurrentUser();
+        return { error: null };
+      } catch (err) {
+        return { error: errorMessage(err) };
+      }
     },
     async signOut() {
-      await supabase.auth.signOut();
+      try {
+        await api.post("/auth/logout");
+      } finally {
+        setUser(null);
+      }
     },
     async sendPasswordReset(email) {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      return { error: error?.message ?? null };
+      try {
+        await api.post("/auth/forgot-password", { email });
+        return { error: null };
+      } catch (err) {
+        return { error: errorMessage(err) };
+      }
     },
-    async updatePassword(password) {
-      const { error } = await supabase.auth.updateUser({ password });
-      return { error: error?.message ?? null };
+    async resetPassword(token, password) {
+      try {
+        await api.post("/auth/reset-password", { token, password });
+        return { error: null };
+      } catch (err) {
+        return { error: errorMessage(err) };
+      }
     },
   };
 

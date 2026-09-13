@@ -68,13 +68,8 @@ export interface Bet {
 }
 
 /**
- * Hand-written row types for the Postgres schema (see supabase/migrations).
- *
- * These are intentionally NOT wired up as the generic parameter to
- * `createClient<Database>()` — the postgrest-js version pulled in here
- * requires the schema to structurally satisfy its internal `GenericSchema`
- * constraint, which plain hand-written interfaces don't reliably do across
- * versions. Instead, the Supabase client is untyped and each query/RPC call
- * site applies `.returns<T>()` (or a cast for `rpc()`) with the types below
- * — same safety at the call site, without fighting the generic.
+ * These types describe the JSON shape returned by the Node/MongoDB API in
+ * `server/` — see each Mongoose model's `toJSON` transform (e.g.
+ * `server/src/models/GameRound.ts`), which deliberately serializes to this
+ * exact snake_case shape rather than Mongo's native camelCase/`_id`.
  */

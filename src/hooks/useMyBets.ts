@@ -1,6 +1,5 @@
-import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabaseClient";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
 import type { Bet, GameRound } from "@/types/database";
 
@@ -17,56 +16,20 @@ export function useMyBetForRound(roundId: string | undefined) {
   return useQuery({
     queryKey: ["my-bet", roundId, user?.id],
     enabled: !!user && !!roundId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bets")
-        .select("*")
-        .eq("round_id", roundId!)
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data as Bet | null;
-    },
+    queryFn: () => api.get<Bet | null>(`/bets/mine/round/${roundId}`),
+    // Only matters while the round is still live; cheap enough to just
+    // always poll rather than track round status here too.
+    refetchInterval: 2_000,
   });
 }
 
 export function useMyBetHistory(limit = 50) {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  const query = useQuery({
+  return useQuery({
     queryKey: ["my-bet-history", user?.id, limit],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bets")
-        .select("*, game_rounds(round_number, dice_result, winning_side, status, completed_at)")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      return data as BetWithRound[];
-    },
+    queryFn: () => api.get<BetWithRound[]>(`/bets/mine?limit=${limit}`),
+    refetchInterval: 10_000,
   });
-
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`bets-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "bets", filter: `user_id=eq.${user.id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["my-bet-history", user.id] });
-          queryClient.invalidateQueries({ queryKey: ["my-bet"] });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
-
-  return query;
 }

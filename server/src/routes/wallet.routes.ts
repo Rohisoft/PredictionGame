@@ -10,7 +10,7 @@ walletRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const wallet = await getWalletForUser(req.userId!);
-    res.json({ balance: wallet.balance, updatedAt: wallet.updatedAt });
+    res.json(wallet);
   }),
 );
 

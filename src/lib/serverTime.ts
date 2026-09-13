@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { api } from "@/lib/apiClient";
 
 const RESYNC_INTERVAL_MS = 30_000;
 
@@ -14,12 +14,16 @@ export function useServerTimeOffset() {
 
   const resync = useCallback(async () => {
     const requestStart = Date.now();
-    const { data, error } = await supabase.rpc("get_server_time");
+    let response: { now: string };
+    try {
+      response = await api.get<{ now: string }>("/server-time");
+    } catch {
+      return;
+    }
     const requestEnd = Date.now();
-    if (error || !data) return;
 
     const roundTripMs = requestEnd - requestStart;
-    const serverNowMs = new Date(data).getTime() + roundTripMs / 2;
+    const serverNowMs = new Date(response.now).getTime() + roundTripMs / 2;
     setOffsetMs(serverNowMs - requestEnd);
     setSynced(true);
   }, []);

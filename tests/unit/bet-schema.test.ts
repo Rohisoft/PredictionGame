@@ -31,9 +31,9 @@ describe("betSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects a malformed round id", () => {
+  it("rejects an empty round id", () => {
     const result = betSchema.safeParse({
-      roundId: "not-a-uuid",
+      roundId: "",
       selectedSide: "odd",
       amount: 10,
     });
