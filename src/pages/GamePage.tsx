@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,7 @@ import { useServerTimeOffset } from "@/lib/serverTime";
 import { useServerTick } from "@/hooks/useServerTick";
 import { useBetSettlementToasts } from "@/hooks/useBetSettlementToasts";
 import { getRoundPhase } from "@/types/game";
+import { cn } from "@/lib/utils";
 
 /** How long to keep showing a completed round's result before moving on. */
 const REVEAL_HOLD_MS = 4_000;
@@ -33,40 +34,37 @@ export function GamePage() {
   // the completed round without ever showing it. Pinning by id and holding
   // it a few seconds after it completes is what makes the reveal visible.
   const [activeRoundId, setActiveRoundId] = useState<string | null>(null);
-  const pendingNextIdRef = useRef<string | null>(null);
   const { data: round } = useRoundById(activeRoundId);
 
+  // Re-evaluated whenever EITHER the pinned round's own data changes (it
+  // finishes revealing) OR a newer round becomes known — whichever of the
+  // two arrives last is what should trigger the switch. Depending on only
+  // one of them (as an earlier version of this did) leaves a gap: if the
+  // newer round becomes known first, nothing was watching for the pinned
+  // round to finish anymore, and the UI never advances.
   useEffect(() => {
-    if (latest && activeRoundId === null) {
+    if (!latest) return;
+
+    if (activeRoundId === null) {
       setActiveRoundId(latest.id);
+      return;
     }
-  }, [latest, activeRoundId]);
 
-  useEffect(() => {
-    if (latest && activeRoundId && latest.id !== activeRoundId) {
-      pendingNextIdRef.current = latest.id;
-    }
-  }, [latest, activeRoundId]);
+    if (latest.id === activeRoundId) return;
+    if (round?.status !== "completed") return; // still revealing; wait for it
 
-  useEffect(() => {
-    if (!round || round.status !== "completed" || !pendingNextIdRef.current) return;
-    const nextId = pendingNextIdRef.current;
-    const timeout = setTimeout(() => {
-      setActiveRoundId(nextId);
-      pendingNextIdRef.current = null;
-    }, REVEAL_HOLD_MS);
+    const timeout = setTimeout(() => setActiveRoundId(latest.id), REVEAL_HOLD_MS);
     return () => clearTimeout(timeout);
-  }, [round]);
+  }, [latest, round, activeRoundId]);
 
-  // If a round somehow never settles, don't strand the UI on it forever.
+  // If a round somehow never settles (e.g. the scheduler isn't running),
+  // don't strand the UI on it forever once its result_time has long passed.
   useEffect(() => {
     if (!round || round.status === "completed") return;
     const resultDeadlineMs = new Date(round.result_time).getTime();
     if (now - resultDeadlineMs < STUCK_ROUND_MS) return;
-    const fallbackId = pendingNextIdRef.current ?? latest?.id;
-    if (fallbackId && fallbackId !== activeRoundId) {
-      setActiveRoundId(fallbackId);
-      pendingNextIdRef.current = null;
+    if (latest && latest.id !== activeRoundId) {
+      setActiveRoundId(latest.id);
     }
   }, [round, now, latest, activeRoundId]);
 
@@ -131,6 +129,35 @@ export function GamePage() {
             rolling={isRevealing}
           />
         </CardContent>
+        {round.status === "completed" && (
+          <CardContent className="pt-0">
+            <div
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg border p-3 text-center",
+                myBet?.status === "won"
+                  ? "border-success/40 bg-success/10"
+                  : myBet?.status === "lost"
+                    ? "border-destructive/30 bg-destructive/5"
+                    : "border-border bg-secondary/50",
+              )}
+            >
+              <p className="text-sm font-semibold">
+                {round.winning_side === "odd" ? "Odd" : "Even"} wins with a {round.dice_result}
+              </p>
+              {myBet?.status === "won" && (
+                <p className="text-sm font-medium text-success">
+                  You won ₹{myBet.payout_amount}! 🎉
+                </p>
+              )}
+              {myBet?.status === "lost" && (
+                <p className="text-sm font-medium text-destructive">You lost ₹{myBet.amount}.</p>
+              )}
+              {!myBet && (
+                <p className="text-xs text-muted-foreground">You didn't place a bet this round.</p>
+              )}
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       <Card>

@@ -51,21 +51,12 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
-        "dice-roll": {
-          "0%": { transform: "translateY(0) rotate(0deg) scale(1)" },
-          "20%": { transform: "translateY(-6px) rotate(90deg) scale(1.06)" },
-          "40%": { transform: "translateY(0) rotate(180deg) scale(0.95)" },
-          "60%": { transform: "translateY(-4px) rotate(240deg) scale(1.05)" },
-          "80%": { transform: "translateY(0) rotate(320deg) scale(0.97)" },
-          "100%": { transform: "translateY(0) rotate(360deg) scale(1)" },
-        },
         "fade-in": {
           "0%": { opacity: "0", transform: "translateY(4px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
-        "dice-roll": "dice-roll 0.6s ease-in-out infinite",
         "fade-in": "fade-in 0.25s ease-out",
       },
     },
