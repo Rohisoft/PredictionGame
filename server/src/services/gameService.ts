@@ -44,7 +44,7 @@ export async function placeBet(userId: string, roundId: string, selectedSide: Si
       if (!round) throw new HttpError(404, "Round not found");
 
       if (round.status !== "betting" || Date.now() >= round.bettingEndTime.getTime()) {
-        throw new HttpError(400, "Betting is closed for this round");
+        throw new HttpError(400, "Predictions are closed for this round");
       }
 
       const wallet = await Wallet.findOne({ userId }).session(session);
@@ -61,7 +61,7 @@ export async function placeBet(userId: string, roundId: string, selectedSide: Si
         );
       } catch (err) {
         if (typeof err === "object" && err !== null && "code" in err && (err as { code: number }).code === 11000) {
-          throw new HttpError(409, "You have already placed a bet on this round");
+          throw new HttpError(409, "You've already made a prediction for this round");
         }
         throw err;
       }

@@ -33,7 +33,7 @@ export function HistoryPage() {
       {rows.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            You haven't placed a bet yet — head to the game page to get started.
+            You haven't made a prediction yet — head to the game page to get started.
           </CardContent>
         </Card>
       )}
@@ -51,7 +51,7 @@ export function HistoryPage() {
               <p className="font-medium capitalize">{bet.selected_side}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Stake</p>
+              <p className="text-xs text-muted-foreground">Points</p>
               <p className="font-medium">{formatPoints(bet.amount)} pts</p>
             </div>
             <div>

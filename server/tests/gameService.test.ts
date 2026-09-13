@@ -49,7 +49,7 @@ describe("placeBet", () => {
 
     await placeBet(user._id.toString(), round._id.toString(), "odd", 20);
     await expect(placeBet(user._id.toString(), round._id.toString(), "even", 10)).rejects.toThrow(
-      /already placed a bet/,
+      /already made a prediction/,
     );
   });
 
@@ -58,7 +58,7 @@ describe("placeBet", () => {
     const round = await GameRound.create({ roundNumber: 4, status: "betting", ...makeRoundTimes(-1_000) });
 
     await expect(placeBet(user._id.toString(), round._id.toString(), "odd", 10)).rejects.toThrow(
-      /Betting is closed/,
+      /Predictions are closed/,
     );
   });
 

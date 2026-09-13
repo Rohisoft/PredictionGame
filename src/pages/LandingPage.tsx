@@ -14,8 +14,8 @@ const STEPS = [
   },
   {
     icon: Timer,
-    title: "Place your stake",
-    body: "Betting stays open for 50 seconds every round.",
+    title: "Submit your prediction",
+    body: "Predictions stay open for 50 seconds every round.",
   },
   {
     icon: Sparkles,
@@ -28,7 +28,7 @@ const TRUST_BADGES = [
   {
     icon: ShieldCheck,
     title: "Server-side fairness",
-    body: "The dice roll happens on the backend after betting closes — never influenced by how much is staked on either side.",
+    body: "The dice roll happens on the backend after predictions close — never influenced by how many points are on either side.",
   },
   {
     icon: Wallet,
@@ -82,9 +82,9 @@ export function LandingPage() {
             Pick Odd or Even. Roll the dice. Double your points.
           </h1>
           <p className="max-w-xl text-lg text-muted-foreground">
-            A fast, 60-second dice game. Choose a side, stake some points, and
-            find out when the round's server-rolled dice lands — win and you
-            get 2× your stake back.
+            A fast, 60-second dice prediction game. Choose a side, put some
+            points on it, and find out when the round's server-rolled dice
+            lands — get it right and get 2× your points back.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
@@ -122,12 +122,12 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Stakes */}
+      {/* Points */}
       <section className="border-b border-border bg-secondary/40 py-16">
         <div className="container">
-          <h2 className="text-center text-2xl font-bold">Choose your stake</h2>
+          <h2 className="text-center text-2xl font-bold">Choose how many points</h2>
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
-            Every stake pays the same way: win and get 2× back.
+            Every amount pays the same way: get it right and get 2× back.
           </p>
           <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {STAKE_AMOUNTS.map((amount) => (

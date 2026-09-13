@@ -95,14 +95,14 @@ export function GamePage() {
             <CardTitle>Round #{round.round_number}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               {isBetting
-                ? "Place your bet before betting closes"
+                ? "Submit your prediction before the window closes"
                 : round.status === "completed"
                   ? "Round complete"
-                  : "Betting closed — revealing result"}
+                  : "Predictions closed — revealing result"}
             </p>
           </div>
           <Badge variant={isBetting ? "success" : "destructive"}>
-            {isBetting ? "Betting open" : "Result phase"}
+            {isBetting ? "Predictions open" : "Result phase"}
           </Badge>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
@@ -111,7 +111,7 @@ export function GamePage() {
               targetMs={bettingEndMs}
               totalSeconds={50}
               getServerNow={getServerNow}
-              label="Betting closes in"
+              label="Predictions close in"
               tone="primary"
             />
           ) : (
@@ -155,7 +155,9 @@ export function GamePage() {
                 </p>
               )}
               {!myBet && (
-                <p className="text-xs text-muted-foreground">You didn't place a bet this round.</p>
+                <p className="text-xs text-muted-foreground">
+                  You didn't make a prediction this round.
+                </p>
               )}
             </div>
           </CardContent>
@@ -164,7 +166,7 @@ export function GamePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Your bet</CardTitle>
+          <CardTitle>Your prediction</CardTitle>
         </CardHeader>
         <CardContent>
           <PlaceBetPanel roundId={round.id} disabled={!isBetting} existingBet={myBet} />

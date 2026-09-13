@@ -22,7 +22,7 @@ export function PlaceBetPanel({ roundId, disabled, existingBet }: PlaceBetPanelP
   if (existingBet) {
     return (
       <div className="rounded-xl border border-primary/30 bg-accent p-4 text-center">
-        <p className="text-sm text-muted-foreground">Your bet this round</p>
+        <p className="text-sm text-muted-foreground">Your prediction this round</p>
         <p className="mt-1 text-lg font-bold text-accent-foreground">
           {existingBet.amount} pts on {existingBet.selected_side === "odd" ? "Odd" : "Even"}
         </p>
@@ -33,16 +33,16 @@ export function PlaceBetPanel({ roundId, disabled, existingBet }: PlaceBetPanelP
 
   async function handlePlaceBet() {
     if (!side || !stake) {
-      toast.error("Pick a side and a stake amount first");
+      toast.error("Pick a side and how many points first");
       return;
     }
     try {
       await placeBet.mutateAsync({ roundId, selectedSide: side, amount: stake });
-      toast.success(`Bet placed: ${stake} pts on ${side === "odd" ? "Odd" : "Even"}`);
+      toast.success(`Prediction submitted: ${stake} pts on ${side === "odd" ? "Odd" : "Even"}`);
       setSide(null);
       setStake(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not place bet";
+      const message = err instanceof Error ? err.message : "Could not submit prediction";
       toast.error(message);
     }
   }
@@ -54,7 +54,7 @@ export function PlaceBetPanel({ roundId, disabled, existingBet }: PlaceBetPanelP
         <SideSelector value={side} onChange={setSide} disabled={disabled} />
       </div>
       <div>
-        <p className="mb-2 text-sm font-medium">Choose your stake</p>
+        <p className="mb-2 text-sm font-medium">Choose your points</p>
         <StakeSelector value={stake} onChange={setStake} disabled={disabled} />
       </div>
       <Button
@@ -64,10 +64,10 @@ export function PlaceBetPanel({ roundId, disabled, existingBet }: PlaceBetPanelP
         onClick={handlePlaceBet}
       >
         {placeBet.isPending
-          ? "Placing bet…"
+          ? "Submitting…"
           : disabled
-            ? "Betting closed"
-            : "Place Bet"}
+            ? "Predictions closed"
+            : "Submit Prediction"}
       </Button>
     </div>
   );

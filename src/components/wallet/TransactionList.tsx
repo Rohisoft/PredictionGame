@@ -8,7 +8,7 @@ import type { TransactionType } from "@/types/database";
 const TYPE_META: Record<TransactionType, { label: string; icon: typeof ArrowDownCircle; credit: boolean }> = {
   deposit: { label: "Deposit", icon: ArrowDownCircle, credit: true },
   withdrawal: { label: "Withdrawal", icon: ArrowUpCircle, credit: false },
-  bet: { label: "Bet placed", icon: ArrowUpCircle, credit: false },
+  bet: { label: "Prediction placed", icon: ArrowUpCircle, credit: false },
   payout: { label: "Payout", icon: Gift, credit: true },
   refund: { label: "Refund", icon: RotateCcw, credit: true },
   adjustment: { label: "Admin adjustment", icon: ShieldPlus, credit: true },
