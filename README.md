@@ -10,8 +10,19 @@ points to a player's wallet directly. Every new signup also gets a 100-point
 welcome bonus so the game is playable immediately.
 
 All security- and fairness-critical logic — bet validation, wallet debits,
-dice generation, and settlement — lives in Postgres functions, never in the
-frontend. See [`supabase/migrations/0003_functions.sql`](supabase/migrations/0003_functions.sql).
+dice generation, and settlement — lives on the backend, never in the
+frontend.
+
+There are now **two backend implementations** in this repo:
+
+- `supabase/` — the original Postgres/Supabase backend (SQL functions, RLS,
+  pg_cron). The frontend in `src/` currently talks to this one via
+  `supabase-js`. See [`supabase/migrations/0003_functions.sql`](supabase/migrations/0003_functions.sql).
+- `server/` — a from-scratch Node.js/Express + MongoDB backend with the same
+  game logic and custom JWT auth (no Supabase dependency). See
+  [`server/README.md`](server/README.md). **The frontend does not talk to
+  this one yet** — wiring `src/` up to call this API instead of Supabase is
+  a separate follow-up.
 
 ## Tech stack
 
