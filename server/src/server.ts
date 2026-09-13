@@ -7,8 +7,11 @@ async function main() {
   await connectDB();
 
   const app = createApp();
-  app.listen(env.PORT, () => {
-    console.log(`API listening on port ${env.PORT}`);
+  // Explicit 0.0.0.0 — inside a container, binding without a host can end
+  // up unreachable from outside it even though it "works" locally, which
+  // is exactly what leaves a host like Render unable to detect the port.
+  app.listen(env.PORT, "0.0.0.0", () => {
+    console.log(`API listening on 0.0.0.0:${env.PORT}`);
   });
 
   startRoundScheduler();
