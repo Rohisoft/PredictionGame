@@ -12,13 +12,17 @@ export type Side = "odd" | "even";
 
 export type BetStatus = "pending" | "won" | "lost" | "refunded";
 
+export type Role = "user" | "admin" | "superadmin";
+
 export interface Profile {
   id: string;
   username: string;
   full_name: string | null;
   email: string | null;
   phone: string | null;
+  role: Role;
   is_admin: boolean;
+  is_super_admin: boolean;
   must_change_password: boolean;
   created_at: string;
   updated_at: string;

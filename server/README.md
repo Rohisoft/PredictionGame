@@ -57,6 +57,37 @@ the next one — see `src/jobs/roundScheduler.ts`. There is no external
 scheduler dependency; as long as this process stays running, rounds keep
 advancing.
 
+## Role hierarchy and the points economy
+
+Three roles (`User.role`): `user` (a player), `admin` (manages their own
+players), `superadmin` (manages admins). This isn't just an access-control
+distinction — points actually move through the hierarchy rather than being
+minted wherever an admin feels like it:
+
+- **superadmin → admin** is a mint: `POST /superadmin/admins/adjust-points`
+  credits (or debits) an admin's wallet directly, with no source to deduct
+  from — a superadmin sits at the top, so this is how new points enter the
+  economy at all. New admin accounts start at 0 balance (no welcome bonus)
+  precisely so they have to be recharged before they can give anything out.
+- **admin → their own player** is a transfer: `POST /admin/adjust-points`
+  moves points out of the *admin's own wallet* into the player's (or back,
+  for a negative amount) — see `adminAdjustPoints` in `adminService.ts`.
+  Two wallets change in the same transaction, both guarded so neither goes
+  negative. An admin can never target their own account through this
+  endpoint, and can only target players they personally created
+  (`User.createdBy`) — a superadmin isn't ownership-restricted and can
+  adjust any player, still by transfer from their own wallet.
+- Players still get the usual 100pt welcome bonus on creation, from either
+  an admin or a superadmin — that one's still a flat mint, unrelated to the
+  creating admin's balance (creating an account doesn't cost anything;
+  actually funding it afterward does).
+
+A superadmin's own `/admin/*` access (listing/adjusting players,
+create-user) is unrestricted by `createdBy` — full oversight of everyone.
+A plain admin only ever sees/manages accounts where `createdBy` is
+themselves. `GET /superadmin/admins` and `POST /superadmin/admins` are
+superadmin-only (`requireSuperAdmin` middleware).
+
 ## Auth model
 
 Custom JWT auth, no external auth provider, **no public self-signup**, and
@@ -123,19 +154,24 @@ All routes are under `/api`. Endpoints other than `/server-time` and the
 | POST | `/admin/users` | Admin only — `{ username, password, fullName, email?, phone? }`, creates user + wallet + 100pt bonus |
 | POST | `/admin/users/set-password` | Admin only — `{ username, password }`, resets someone's password directly (e.g. no email on file / locked out) |
 | GET | `/admin/users/:id/transactions` | Admin only — a specific user's transaction history |
-| POST | `/admin/adjust-points` | Admin only — `{ username, amount, description? }`; positive credits, negative debits (never below zero) |
+| POST | `/admin/adjust-points` | Admin only — `{ username, amount, description? }`; transfers between the caller's own wallet and a player they created (never below zero on either side) |
+| GET | `/superadmin/admins?search=&limit=` | Superadmin only — list admin accounts with their balance |
+| POST | `/superadmin/admins` | Superadmin only — same body as `/admin/users`; creates an admin (0 starting balance) |
+| POST | `/superadmin/admins/adjust-points` | Superadmin only — `{ username, amount, description? }`; mints/debits an admin's wallet directly, no source deduction |
 
 There's no round-settlement endpoint exposed over HTTP at all —
 `settleRound`/`createNextRound`/`tickRounds` are only ever called from
 `src/jobs/roundScheduler.ts`, never from a route handler, mirroring how the
 Postgres functions were never granted to the `authenticated` role.
 
-## Bootstrapping the first admin
+## Bootstrapping the first superadmin
 
-`POST /admin/users` (creating an account) requires an existing admin — so
-the very first admin has to be created directly in the database once, the
-same way `adminCreateUser` would: insert the user with a bcrypt hash of a
-password you pick, a wallet with the welcome bonus, and `isAdmin: true`.
+`POST /superadmin/admins` (creating an admin) requires an existing
+superadmin — so the very first one has to be created directly in the
+database once: insert the user with a bcrypt hash of a password you pick,
+`role: "superadmin"`, and a wallet (balance doesn't really matter for a
+superadmin, since giving points to an admin is a mint, not a transfer —
+0 is fine).
 
 ```js
 // In Node, first hash a password: require("bcryptjs").hashSync("your-temp-password", 12)
@@ -145,21 +181,22 @@ db.users.insertOne({
   _id: userId,
   username: "admin",
   fullName: "Admin",
-  isAdmin: true,
+  role: "superadmin",
   mustChangePassword: true,
   passwordHash: "<paste the bcrypt hash here>",
   createdAt: new Date(),
   updatedAt: new Date(),
 });
-db.wallets.insertOne({ userId, balance: 100, createdAt: new Date(), updatedAt: new Date() });
+db.wallets.insertOne({ userId, balance: 0, createdAt: new Date(), updatedAt: new Date() });
 ```
 
 Log in as `admin` with the temp password you hashed — `mustChangePassword`
 being `true` means the app immediately routes you to set your own password.
-From then on, that account can create every other user via the admin page,
-and promote further admins the same way if it ever needs to (no self-serve
-promotion endpoint, by design — flip `isAdmin` directly in the database for
-that).
+From then on, that account can create admin accounts (`POST
+/superadmin/admins`), recharge them, and — same as any admin — create and
+manage its own players directly. No self-serve promotion endpoint, by
+design; flip `role` directly in the database if you ever need to change
+someone's tier by hand.
 
 ## Testing
 
@@ -174,9 +211,12 @@ stake rejection, insufficient-balance rejection, betting-after-deadline
 rejection, duplicate-bet-per-round rejection, win/loss payout math,
 settlement idempotency, account creation's wallet+bonus setup, username-
 based login success/failure, `changePassword`, password-reset recovery,
-and admin user management (listing, search, credit/debit with the
-below-zero guard, account creation, username availability/suggestions,
-and admin-driven password resets).
+and the full role hierarchy: admin↔player point transfers (including
+self-adjustment and cross-admin ownership being rejected), superadmin↔admin
+minting (including that the superadmin's own balance is untouched),
+scoped listing (an admin only sees players they created; a superadmin
+sees everyone), username availability/suggestions, and admin-driven
+password resets.
 
 The first run downloads a MongoDB binary for `mongodb-memory-server` — this
 needs network access and may be slow or fail in a sandboxed/offline CI

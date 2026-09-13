@@ -6,20 +6,20 @@ import { adminAdjustPointsSchema } from "@/schemas/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminAdjustPoints } from "@/hooks/useAdmin";
+import { useSuperAdminAdjustAdminPoints } from "@/hooks/useAdmin";
 import { cn } from "@/lib/utils";
 
-const PRESETS = [-100, -50, 50, 100, 500] as const;
+const PRESETS = [-500, 500, 1000, 5000] as const;
 
 const formSchema = adminAdjustPointsSchema.omit({ username: true });
 type FormInput = z.infer<typeof formSchema>;
 
-interface AdjustPointsFormProps {
+interface RechargeAdminFormProps {
   username: string;
   onDone?: () => void;
 }
 
-export function AdjustPointsForm({ username, onDone }: AdjustPointsFormProps) {
+export function RechargeAdminForm({ username, onDone }: RechargeAdminFormProps) {
   const {
     register,
     handleSubmit,
@@ -27,15 +27,15 @@ export function AdjustPointsForm({ username, onDone }: AdjustPointsFormProps) {
     reset,
     formState: { errors },
   } = useForm<FormInput>({ resolver: zodResolver(formSchema) });
-  const adjustPoints = useAdminAdjustPoints();
+  const adjustAdminPoints = useSuperAdminAdjustAdminPoints();
 
   async function onSubmit(values: FormInput) {
     try {
-      await adjustPoints.mutateAsync({ ...values, username });
+      await adjustAdminPoints.mutateAsync({ ...values, username });
       toast.success(
         values.amount > 0
           ? `Credited ${values.amount} points to @${username}`
-          : `Debited ${Math.abs(values.amount)} points from @${username}`,
+          : `Deducted ${Math.abs(values.amount)} points from @${username}`,
       );
       reset();
       onDone?.();
@@ -48,8 +48,7 @@ export function AdjustPointsForm({ username, onDone }: AdjustPointsFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 rounded-lg border border-border bg-secondary/40 p-3">
       <p className="text-xs text-muted-foreground">
-        Points you give come out of your own balance; reclaiming (negative amount) returns them to
-        you.
+        This mints points directly for @{username} — it isn't taken from your own balance.
       </p>
       <div className="flex flex-wrap gap-1.5">
         {PRESETS.map((preset) => (
@@ -70,27 +69,27 @@ export function AdjustPointsForm({ username, onDone }: AdjustPointsFormProps) {
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
         <div className="flex-1 space-y-1">
-          <Label htmlFor={`amount-${username}`} className="text-xs">
-            Amount (negative to debit)
+          <Label htmlFor={`recharge-amount-${username}`} className="text-xs">
+            Amount (negative to deduct)
           </Label>
           <Input
-            id={`amount-${username}`}
+            id={`recharge-amount-${username}`}
             type="number"
             step="1"
-            placeholder="e.g. 100 or -50"
+            placeholder="e.g. 1000 or -500"
             {...register("amount", { valueAsNumber: true })}
           />
           {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
         </div>
         <div className="flex-1 space-y-1">
-          <Label htmlFor={`description-${username}`} className="text-xs">
+          <Label htmlFor={`recharge-note-${username}`} className="text-xs">
             Note (optional)
           </Label>
-          <Input id={`description-${username}`} placeholder="Manual adjustment" {...register("description")} />
+          <Input id={`recharge-note-${username}`} placeholder="Monthly recharge" {...register("description")} />
         </div>
       </div>
-      <Button type="submit" size="sm" disabled={adjustPoints.isPending} className="w-full sm:w-auto">
-        {adjustPoints.isPending ? "Applying…" : "Apply"}
+      <Button type="submit" size="sm" disabled={adjustAdminPoints.isPending} className="w-full sm:w-auto">
+        {adjustAdminPoints.isPending ? "Applying…" : "Apply"}
       </Button>
     </form>
   );

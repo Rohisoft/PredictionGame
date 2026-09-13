@@ -10,7 +10,7 @@ profileRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.userId).select(
-      "username email phone fullName isAdmin mustChangePassword createdAt updatedAt",
+      "username email phone fullName role mustChangePassword createdAt updatedAt",
     );
     if (!user) throw new HttpError(404, "User not found");
     res.json(user);

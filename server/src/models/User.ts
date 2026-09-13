@@ -1,9 +1,12 @@
-import { Schema, model, type InferSchemaType } from "mongoose";
+import { Schema, model, Types, type InferSchemaType } from "mongoose";
 
 // Login identifier. Letters/digits/underscore/dot only, so a phone number
 // (digits) works fine as a username too, per how admin account creation
 // uses it.
 export const USERNAME_PATTERN = /^[a-z0-9_.]{3,30}$/;
+
+export const ROLES = ["user", "admin", "superadmin"] as const;
+export type Role = (typeof ROLES)[number];
 
 const userSchema = new Schema(
   {
@@ -22,7 +25,11 @@ const userSchema = new Schema(
     // letting the person into the app.
     mustChangePassword: { type: Boolean, default: true },
     fullName: { type: String, default: null },
-    isAdmin: { type: Boolean, default: false },
+    role: { type: String, enum: ROLES, default: "user", index: true },
+    // Which admin (or superadmin) created this account — an admin can only
+    // see/manage users they personally created, not everyone. null for
+    // accounts that predate this field, or created directly (bootstrap).
+    createdBy: { type: Types.ObjectId, ref: "User", default: null },
     // Hash of the single currently-valid refresh token, so logout / login
     // elsewhere can invalidate it. Simplification: one active session per
     // user (logging in on a new device signs the old one out).
@@ -44,7 +51,9 @@ userSchema.set("toJSON", {
       full_name: ret.fullName ?? null,
       email: ret.email ?? null,
       phone: ret.phone ?? null,
-      is_admin: ret.isAdmin ?? false,
+      role: ret.role ?? "user",
+      is_admin: ret.role === "admin" || ret.role === "superadmin",
+      is_super_admin: ret.role === "superadmin",
       must_change_password: ret.mustChangePassword ?? false,
       created_at: ret.createdAt,
       updated_at: ret.updatedAt,

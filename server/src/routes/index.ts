@@ -5,6 +5,7 @@ import { walletRouter } from "./wallet.routes.js";
 import { roundsRouter } from "./rounds.routes.js";
 import { betsRouter } from "./bets.routes.js";
 import { adminRouter } from "./admin.routes.js";
+import { superAdminRouter } from "./superadmin.routes.js";
 
 export const apiRouter = Router();
 
@@ -18,3 +19,4 @@ apiRouter.use("/wallet", walletRouter);
 apiRouter.use("/rounds", roundsRouter);
 apiRouter.use("/bets", betsRouter);
 apiRouter.use("/admin", adminRouter);
+apiRouter.use("/superadmin", superAdminRouter);

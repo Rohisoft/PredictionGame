@@ -21,9 +21,18 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   }
 }
 
+/** admin or superadmin. */
 export const requireAdmin = asyncHandler(async (req, _res, next) => {
-  const user = await User.findById(req.userId).select("isAdmin");
-  if (!user?.isAdmin) {
+  const user = await User.findById(req.userId).select("role");
+  if (user?.role !== "admin" && user?.role !== "superadmin") {
+    throw new HttpError(403, "Not authorized");
+  }
+  next();
+});
+
+export const requireSuperAdmin = asyncHandler(async (req, _res, next) => {
+  const user = await User.findById(req.userId).select("role");
+  if (user?.role !== "superadmin") {
     throw new HttpError(403, "Not authorized");
   }
   next();

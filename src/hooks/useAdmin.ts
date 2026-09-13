@@ -85,3 +85,39 @@ export function useAdminSetPassword() {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Superadmin-only: managing admin accounts themselves.
+// ---------------------------------------------------------------------------
+
+export function useSuperAdminAdmins(search: string) {
+  return useQuery({
+    queryKey: ["superadmin-admins", search],
+    queryFn: () => api.get<AdminUser[]>(`/superadmin/admins?search=${encodeURIComponent(search)}`),
+    refetchInterval: 15_000,
+  });
+}
+
+export function useSuperAdminCreateAdmin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: CreateUserParams) => api.post<Profile>("/superadmin/admins", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-admins"] });
+    },
+  });
+}
+
+/** Mint/credit (or debit) an admin's own wallet directly — no source deduction. */
+export function useSuperAdminAdjustAdminPoints() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: AdjustPointsParams) => api.post<{ ok: true }>("/superadmin/admins/adjust-points", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-admins"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-transactions"] });
+    },
+  });
+}

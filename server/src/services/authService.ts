@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { User } from "../models/User.js";
+import { User, type Role } from "../models/User.js";
 import { Wallet } from "../models/Wallet.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
@@ -22,18 +22,26 @@ export interface CreateUserAccountInput {
   passwordHash: string;
   email?: string | null;
   phone?: string | null;
+  role?: Role;
+  createdBy?: string | null;
   /** Defaults to true — the person is expected to change it after their first login. */
   mustChangePassword?: boolean;
 }
 
 /**
- * Creates a user + wallet (with the welcome bonus) in one transaction.
+ * Creates a user + wallet in one transaction. Only plain player accounts
+ * (`role: "user"`, the default) get the points welcome bonus — admin
+ * accounts start at 0 and have to be recharged by a superadmin, since
+ * giving points to a player now costs the admin their own balance (see
+ * adminService.adminAdjustPoints) rather than minting from nowhere.
+ *
  * Admin-created accounts get an admin-chosen initial password and
  * `mustChangePassword: true`, so the frontend routes them to set their own
  * password right after their first successful login.
  */
 export async function createUserAccount(input: CreateUserAccountInput) {
   const username = input.username.toLowerCase();
+  const role: Role = input.role ?? "user";
 
   const existing = await User.findOne({ username });
   if (existing) {
@@ -63,26 +71,32 @@ export async function createUserAccount(input: CreateUserAccountInput) {
             passwordHash: input.passwordHash,
             ...(input.email ? { email: input.email.toLowerCase() } : {}),
             phone: input.phone ?? null,
+            role,
+            createdBy: input.createdBy ?? null,
             mustChangePassword: input.mustChangePassword ?? true,
           },
         ],
         { session },
       );
-      const [wallet] = await Wallet.create([{ userId: user._id, balance: WELCOME_BONUS }], { session });
-      await WalletTransaction.create(
-        [
-          {
-            userId: user._id,
-            walletId: wallet._id,
-            transactionType: "adjustment",
-            amount: WELCOME_BONUS,
-            balanceBefore: 0,
-            balanceAfter: WELCOME_BONUS,
-            description: "Welcome bonus",
-          },
-        ],
-        { session },
-      );
+
+      const startingBalance = role === "user" ? WELCOME_BONUS : 0;
+      const [wallet] = await Wallet.create([{ userId: user._id, balance: startingBalance }], { session });
+      if (startingBalance > 0) {
+        await WalletTransaction.create(
+          [
+            {
+              userId: user._id,
+              walletId: wallet._id,
+              transactionType: "adjustment",
+              amount: startingBalance,
+              balanceBefore: 0,
+              balanceAfter: startingBalance,
+              description: "Welcome bonus",
+            },
+          ],
+          { session },
+        );
+      }
       userId = user._id.toString();
     });
 
