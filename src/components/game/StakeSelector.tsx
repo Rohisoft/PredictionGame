@@ -23,7 +23,7 @@ export function StakeSelector({ value, onChange, disabled }: StakeSelectorProps)
               : "border-border bg-card hover:border-primary/40",
           )}
         >
-          ₹{amount}
+          {amount} pts
         </button>
       ))}
     </div>

@@ -11,7 +11,8 @@ export function RulesPanel() {
         <p>Pick Odd (1, 3, 5) or Even (2, 4, 6), choose a stake, and place your bet before betting closes.</p>
         <p>
           A standard six-sided dice is rolled once per round by the server. Win and you receive{" "}
-          <strong>2× your stake</strong> back (e.g. bet ₹50, win ₹100). Lose and the stake is gone.
+          <strong>2× your stake</strong> back (e.g. stake 50 points, win 100 points). Lose and the
+          stake is gone.
         </p>
         <p>
           The dice result is generated securely on the server after betting closes — it can never

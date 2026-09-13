@@ -133,8 +133,8 @@ export function LandingPage() {
             {STAKE_AMOUNTS.map((amount) => (
               <Card key={amount} className="text-center transition-shadow hover:shadow-md">
                 <CardContent className="flex flex-col items-center gap-2 p-6">
-                  <p className="text-3xl font-bold text-primary">₹{amount}</p>
-                  <Badge variant="success">pays ₹{amount * 2}</Badge>
+                  <p className="text-3xl font-bold text-primary">{amount} pts</p>
+                  <Badge variant="success">pays {amount * 2} pts</Badge>
                 </CardContent>
               </Card>
             ))}

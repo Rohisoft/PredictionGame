@@ -52,7 +52,7 @@ export function HistoryPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Stake</p>
-              <p className="font-medium">₹{formatPoints(bet.amount)}</p>
+              <p className="font-medium">{formatPoints(bet.amount)} pts</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Dice result</p>
@@ -73,7 +73,7 @@ export function HistoryPage() {
                   bet.payout_amount > 0 ? "text-success" : "text-muted-foreground",
                 )}
               >
-                {bet.payout_amount > 0 ? `+₹${formatPoints(bet.payout_amount)}` : "—"}
+                {bet.payout_amount > 0 ? `+${formatPoints(bet.payout_amount)} pts` : "—"}
               </p>
             </div>
           </CardContent>

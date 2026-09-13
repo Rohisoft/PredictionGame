@@ -38,8 +38,8 @@ described above.
 
 - Each round lasts 60 seconds: **50 seconds of betting**, then a **10 second
   reveal**.
-- Pick **Odd** (1, 3, 5) or **Even** (2, 4, 6) and a stake of ₹10, ₹20, ₹50,
-  or ₹100.
+- Pick **Odd** (1, 3, 5) or **Even** (2, 4, 6) and a stake of 10, 20, 50, or
+  100 points.
 - A standard six-sided dice is rolled once per round, on the server, after
   betting closes — see "Fairness" below.
 - A winning bet pays **2× the stake** (stake included). A losing bet pays

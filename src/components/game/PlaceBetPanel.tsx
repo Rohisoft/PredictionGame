@@ -24,7 +24,7 @@ export function PlaceBetPanel({ roundId, disabled, existingBet }: PlaceBetPanelP
       <div className="rounded-xl border border-primary/30 bg-accent p-4 text-center">
         <p className="text-sm text-muted-foreground">Your bet this round</p>
         <p className="mt-1 text-lg font-bold text-accent-foreground">
-          ₹{existingBet.amount} on {existingBet.selected_side === "odd" ? "Odd" : "Even"}
+          {existingBet.amount} pts on {existingBet.selected_side === "odd" ? "Odd" : "Even"}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">Good luck — results drop soon.</p>
       </div>
@@ -38,7 +38,7 @@ export function PlaceBetPanel({ roundId, disabled, existingBet }: PlaceBetPanelP
     }
     try {
       await placeBet.mutateAsync({ roundId, selectedSide: side, amount: stake });
-      toast.success(`Bet placed: ₹${stake} on ${side === "odd" ? "Odd" : "Even"}`);
+      toast.success(`Bet placed: ${stake} pts on ${side === "odd" ? "Odd" : "Even"}`);
       setSide(null);
       setStake(null);
     } catch (err) {

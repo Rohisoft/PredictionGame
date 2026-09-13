@@ -146,11 +146,13 @@ export function GamePage() {
               </p>
               {myBet?.status === "won" && (
                 <p className="text-sm font-medium text-success">
-                  You won ₹{myBet.payout_amount}! 🎉
+                  You won {myBet.payout_amount} points! 🎉
                 </p>
               )}
               {myBet?.status === "lost" && (
-                <p className="text-sm font-medium text-destructive">You lost ₹{myBet.amount}.</p>
+                <p className="text-sm font-medium text-destructive">
+                  You lost {myBet.amount} points.
+                </p>
               )}
               {!myBet && (
                 <p className="text-xs text-muted-foreground">You didn't place a bet this round.</p>

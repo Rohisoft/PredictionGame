@@ -31,11 +31,11 @@ export function useBetSettlementToasts() {
       const previousStatus = lastStatusById.current.get(bet.id);
       if (previousStatus === "pending" && bet.status !== "pending") {
         if (bet.status === "won") {
-          toast.success(`You won! +₹${bet.payout_amount} credited to your wallet.`);
+          toast.success(`You won! +${bet.payout_amount} points credited to your wallet.`);
         } else if (bet.status === "lost") {
-          toast.error(`No luck this round — you lost ₹${bet.amount}.`);
+          toast.error(`No luck this round — you lost ${bet.amount} points.`);
         } else if (bet.status === "refunded") {
-          toast.info(`Round cancelled — ₹${bet.amount} refunded.`);
+          toast.info(`Round cancelled — ${bet.amount} points refunded.`);
         }
       }
       lastStatusById.current.set(bet.id, bet.status);
