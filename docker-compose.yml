@@ -1,0 +1,71 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: prediction-game-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    # A replica set (even a single-node one) is required for the
+    # multi-document transactions placeBet/settleRound/adminAddPoints use —
+    # a plain standalone mongod does not support them at all.
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: mongosh --quiet --eval "db.adminCommand('ping')"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: initiates the replica set on first run, then exits. Safe to
+  # leave in every `docker compose up` — it just prints "already
+  # initialized" on later runs.
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: >
+      mongosh --host mongo:27017 --quiet --eval
+      "try { rs.status(); print('already initialized'); } catch (e) { rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]}); print('initiated'); }"
+
+  server:
+    build: ./server
+    container_name: prediction-game-server
+    restart: unless-stopped
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+    env_file:
+      - ./server/.env
+    environment:
+      # Overrides whatever's in server/.env — inside this compose network,
+      # Mongo is reachable at the service name "mongo", not "localhost".
+      MONGODB_URI: mongodb://mongo:27017/prediction_game?replicaSet=rs0
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./server:/app
+      - server_node_modules:/app/node_modules
+
+  web:
+    build: .
+    container_name: prediction-game-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      # Browser-facing: the user's browser calls this URL directly, so it
+      # must be the host-mapped address, not the in-network service name.
+      VITE_API_URL: http://localhost:4000/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - web_node_modules:/app/node_modules
+
+volumes:
+  mongo_data:
+  server_node_modules:
+  web_node_modules:

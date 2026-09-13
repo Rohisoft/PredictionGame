@@ -16,8 +16,10 @@ bet/transaction record it belongs to atomic — the equivalent of the
 require MongoDB to be running as a replica set. A standalone `mongod` does
 not support them at all. MongoDB Atlas clusters are replica sets by default,
 even on the free (M0) tier, so no extra setup is needed there for
-production. For local dev without Atlas, `docker-compose.yml` in this
-folder runs a single-node replica set for you (see below).
+production. For local dev without Atlas, the `mongo` service in
+[`../docker-compose.yml`](../docker-compose.yml) runs a single-node replica
+set for you — see the root README's "Local development" section for the
+one-command way to run everything (Mongo + this API + the frontend).
 
 ## Environment variables
 
@@ -34,35 +36,17 @@ cp .env.example .env
 
 ## Local development
 
-### Option A: local MongoDB via Docker (recommended for local dev)
+**Easiest path**: run everything (Mongo + this API + the frontend) via the
+root `docker-compose.yml` — see the main [README](../README.md#local-development).
+That builds this folder using `Dockerfile` (a `node:20-alpine` image running
+`npm run dev` with your source bind-mounted, so edits hot-reload) and
+points it at the `mongo` service automatically.
+
+**Running the API by itself** (against Atlas, or a Mongo you're managing
+some other way):
 
 ```bash
-docker compose up -d
-```
-
-This starts a single-node MongoDB replica set on `localhost:27017` and
-initializes it automatically (the `mongo-init` service runs `rs.initiate()`
-once, then exits — safe to run every time, it just no-ops on later runs).
-`.env.example`'s default `MONGODB_URI` already points at it:
-
-```
-MONGODB_URI=mongodb://localhost:27017/prediction_game?replicaSet=rs0
-```
-
-Check it's healthy with `docker compose ps` (mongo should show `healthy`),
-or connect directly with `docker compose exec mongo mongosh`. Data persists
-in a Docker volume across restarts; `docker compose down -v` wipes it.
-
-### Option B: MongoDB Atlas
-
-Create a free (M0) cluster, grab its connection string from Atlas's
-"Connect" dialog, and use that as `MONGODB_URI` instead — see the commented
-example in `.env.example`. Needed for anything beyond local dev, since
-there's no production hosting story for a local Docker MongoDB.
-
-### Running the API
-
-```bash
+cp .env.example .env   # fill in MONGODB_URI, JWT secrets, etc.
 npm install
 npm run dev
 ```

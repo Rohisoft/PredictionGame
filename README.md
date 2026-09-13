@@ -87,39 +87,55 @@ server/         Node.js/Express + MongoDB API — see server/README.md
 
 ## Local development
 
-You need **two processes running**: the API (`server/`) and the frontend
-(this directory). They talk over plain HTTP with cookie-based auth — no
-shared code or build step links them.
+There are three moving parts — MongoDB, the API (`server/`), and the
+frontend (this directory) — and the whole thing runs from a single
+`docker-compose.yml` at the repo root. Nothing needs to be installed on
+your machine except Docker.
 
-### 1. Start the API
-
-Follow [`server/README.md`](server/README.md) first: set up MongoDB Atlas
-(or your own replica set), configure `server/.env`, then from `server/`:
+### Option A: everything via Docker (recommended)
 
 ```bash
-npm install
-npm run dev
+docker compose up -d --build
 ```
 
-This serves the API at `http://localhost:4000` and starts the in-process
-round scheduler.
+This builds and starts all three:
 
-### 2. Configure and start the frontend
+- `mongo` — MongoDB as a single-node replica set (initialized automatically
+  by the one-shot `mongo-init` service), on `localhost:27017`
+- `server` — the API on `http://localhost:4000`, source bind-mounted so
+  code changes hot-reload (via `tsx watch`) without rebuilding the image
+- `web` — the frontend on `http://localhost:5173`, same hot-reload setup
+  via Vite's dev server
 
-```bash
-npm install
-cp .env.example .env
-```
+`server/.env` (see `server/README.md` if you need to regenerate it) supplies
+the JWT secrets, CORS origin, etc.; `docker-compose.yml` overrides just
+`MONGODB_URI` so the API reaches Mongo at its in-network hostname (`mongo`)
+instead of `localhost`.
 
-`.env` just needs `VITE_API_URL` pointing at the API (`http://localhost:4000/api`
-for the setup above). Then:
-
-```bash
-npm run dev
-```
-
-Open the printed URL (usually `http://localhost:5173`), sign up, and you
+Check everything's up with `docker compose ps` (all three should show
+`running`/`healthy`), then open `http://localhost:5173`, sign up, and you
 should land on the game page with a 100-point welcome bonus.
+
+Logs: `docker compose logs -f server` (or `web`, or `mongo`). Stop
+everything with `docker compose down` (add `-v` to also wipe the Mongo
+data volume).
+
+### Option B: run natively (no Docker)
+
+Follow [`server/README.md`](server/README.md) to set up MongoDB (Atlas, or
+its own Docker Compose snippet) and `server/.env`, then:
+
+```bash
+cd server && npm install && npm run dev     # API on :4000
+```
+
+In another terminal:
+
+```bash
+npm install
+cp .env.example .env   # VITE_API_URL=http://localhost:4000/api
+npm run dev             # frontend on :5173
+```
 
 ### Promoting an admin
 
