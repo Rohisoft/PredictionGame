@@ -22,7 +22,7 @@ export function SignupPage() {
     formState: { errors },
   } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/play" replace />;
 
   async function onSubmit(values: SignupInput) {
     setSubmitting(true);
@@ -37,7 +37,7 @@ export function SignupPage() {
       return;
     }
     toast.success("Account created! Check your email if confirmation is required.");
-    navigate("/");
+    navigate("/play");
   }
 
   return (

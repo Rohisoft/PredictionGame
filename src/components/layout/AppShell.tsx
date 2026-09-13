@@ -7,7 +7,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { formatPoints, cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/", label: "Play", icon: Dices },
+  { to: "/play", label: "Play", icon: Dices },
   { to: "/wallet", label: "Wallet", icon: Wallet },
   { to: "/history", label: "History", icon: History },
   { to: "/profile", label: "Profile", icon: User },

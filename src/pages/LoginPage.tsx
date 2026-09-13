@@ -24,7 +24,7 @@ export function LoginPage() {
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
   if (user) {
-    const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/play";
     return <Navigate to={from} replace />;
   }
 
@@ -36,7 +36,7 @@ export function LoginPage() {
       toast.error(error);
       return;
     }
-    navigate("/");
+    navigate("/play");
   }
 
   return (

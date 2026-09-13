@@ -13,7 +13,7 @@ export function AdminPage() {
   }
 
   if (!profile?.is_admin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/play" replace />;
   }
 
   return (
