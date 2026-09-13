@@ -2,9 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { Profile, WalletTransaction } from "@/types/database";
 
-// email is always present on a real user (required at the schema level),
-// unlike the general Profile type which allows it to be null.
-export type AdminUser = Omit<Profile, "email"> & { email: string; balance: number };
+export type AdminUser = Profile & { balance: number };
 
 export function useAdminUsers(search: string) {
   return useQuery({
@@ -24,7 +22,7 @@ export function useAdminUserTransactions(userId: string | null) {
 }
 
 interface AdjustPointsParams {
-  userEmail: string;
+  username: string;
   amount: number;
   description?: string;
 }
@@ -42,8 +40,11 @@ export function useAdminAdjustPoints() {
 }
 
 interface CreateUserParams {
-  email: string;
+  username: string;
+  password: string;
   fullName: string;
+  email?: string;
+  phone?: string;
 }
 
 export function useAdminCreateUser() {
@@ -51,6 +52,34 @@ export function useAdminCreateUser() {
 
   return useMutation({
     mutationFn: (params: CreateUserParams) => api.post<Profile>("/admin/users", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+}
+
+interface UsernameAvailability {
+  available: boolean;
+  suggestions: string[];
+}
+
+/** On-demand check (call it yourself, e.g. debounced on blur/typing) — not a live query. */
+export function useCheckUsername() {
+  return useMutation({
+    mutationFn: ({ username, phone }: { username: string; phone?: string }) => {
+      const params = new URLSearchParams({ username });
+      if (phone) params.set("phone", phone);
+      return api.get<UsernameAvailability>(`/admin/users/check-username?${params.toString()}`);
+    },
+  });
+}
+
+export function useAdminSetPassword() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: { username: string; password: string }) =>
+      api.post<{ ok: true }>("/admin/users/set-password", params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },

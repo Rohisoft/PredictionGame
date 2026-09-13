@@ -3,20 +3,21 @@ import { asyncHandler, HttpError } from "../utils/asyncHandler.js";
 import { setAuthCookies, clearAuthCookies } from "../utils/cookies.js";
 import { requireAuth } from "../middleware/auth.js";
 import * as authService from "../services/authService.js";
-import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "../validation.js";
+import { changePasswordSchema, forgotPasswordSchema, loginSchema, resetPasswordSchema } from "../validation.js";
 import { env } from "../config/env.js";
 
 export const authRouter = Router();
 
 // No public self-signup — accounts are created by an admin (see
-// POST /admin/users) and activated by the person themselves via
-// "forgot password", since a fresh account has no password at all yet.
+// POST /admin/users), who also sets the initial password. The person is
+// expected to change it via POST /auth/change-password after their first
+// login (see User.mustChangePassword / the frontend's forced redirect).
 
 authRouter.post(
   "/login",
   asyncHandler(async (req, res) => {
-    const { email, password } = loginSchema.parse(req.body);
-    const { userId, accessToken, refreshToken } = await authService.login(email, password);
+    const { username, password } = loginSchema.parse(req.body);
+    const { userId, accessToken, refreshToken } = await authService.login(username, password);
     setAuthCookies(res, accessToken, refreshToken);
     res.json({ userId });
   }),
@@ -45,12 +46,30 @@ authRouter.post(
 );
 
 authRouter.post(
+  "/change-password",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+    const { accessToken, refreshToken } = await authService.changePassword(
+      req.userId!,
+      currentPassword,
+      newPassword,
+    );
+    setAuthCookies(res, accessToken, refreshToken);
+    res.json({ ok: true });
+  }),
+);
+
+authRouter.post(
   "/forgot-password",
   asyncHandler(async (req, res) => {
-    const { email } = forgotPasswordSchema.parse(req.body);
+    const { username } = forgotPasswordSchema.parse(req.body);
     const frontendOrigin = env.corsOrigins[0];
-    await authService.requestPasswordReset(email, (rawToken) => `${frontendOrigin}/reset-password?token=${rawToken}`);
-    // Always the same response, whether or not the email exists.
+    await authService.requestPasswordReset(
+      username,
+      (rawToken) => `${frontendOrigin}/reset-password?token=${rawToken}`,
+    );
+    // Always the same response, whether or not the account exists.
     res.json({ ok: true });
   }),
 );

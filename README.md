@@ -6,8 +6,11 @@ when the round's dice roll is revealed.
 
 This build uses **virtual points, not real money**. There is no payment
 gateway and no user-facing deposit/withdrawal flow — an administrator credits
-points to a player's wallet directly. Every new signup also gets a 100-point
-welcome bonus so the game is playable immediately.
+points to a player's wallet directly. There's also no public sign-up: an
+admin creates every account (choosing a username and initial password),
+and the person changes that password themselves on first login. Every new
+account also gets a 100-point welcome bonus so the game is playable
+immediately.
 
 All security- and fairness-critical logic — bet validation, wallet debits,
 dice generation, and settlement — lives on the backend, never in the
@@ -113,8 +116,9 @@ the JWT secrets, CORS origin, etc.; `docker-compose.yml` overrides just
 instead of `localhost`.
 
 Check everything's up with `docker compose ps` (all three should show
-`running`/`healthy`), then open `http://localhost:5173`, sign up, and you
-should land on the game page with a 100-point welcome bonus.
+`running`/`healthy`). There's no public sign-up — see `server/README.md`
+for how to bootstrap the first admin account, then use the admin page to
+create a player account, and sign in at `http://localhost:5173/login`.
 
 Logs: `docker compose logs -f server` (or `web`, or `mongo`). Stop
 everything with `docker compose down` (add `-v` to also wipe the Mongo
@@ -137,11 +141,13 @@ cp .env.example .env   # VITE_API_URL=http://localhost:4000/api
 npm run dev             # frontend on :5173
 ```
 
-### Promoting an admin
+### Bootstrapping the first admin
 
-No self-serve promotion UI, by design. After signing up, flip the flag
-directly in MongoDB for whichever account should be able to grant points —
-see `server/README.md`.
+There's no public sign-up and no self-serve admin promotion — the very
+first admin account has to be inserted directly in MongoDB once. See
+`server/README.md`'s "Bootstrapping the first admin" for the exact steps;
+after that, admins can create every other account (and promote further
+admins) from the admin page.
 
 ## Testing
 

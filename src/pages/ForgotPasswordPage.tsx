@@ -24,7 +24,7 @@ export function ForgotPasswordPage() {
 
   async function onSubmit(values: ForgotPasswordInput) {
     setSubmitting(true);
-    const { error } = await sendPasswordReset(values.email);
+    const { error } = await sendPasswordReset(values.username);
     setSubmitting(false);
     if (error) {
       toast.error(error);
@@ -39,19 +39,22 @@ export function ForgotPasswordPage() {
         <CardHeader className="items-center text-center">
           <Dices className="mb-1 h-8 w-8 text-primary" />
           <CardTitle>Reset your password</CardTitle>
-          <CardDescription>We'll email you a reset link.</CardDescription>
+          <CardDescription>
+            If your account has an email on file, we'll send a reset link there. Otherwise, ask
+            your admin to reset it for you.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {sent ? (
             <p className="text-center text-sm text-muted-foreground">
-              If an account exists for that email, a reset link is on its way.
+              If that account has an email on file, a reset link is on its way.
             </p>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" {...register("email")} />
-                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" placeholder="janedoe" {...register("username")} />
+                {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
               </div>
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Sending…" : "Send reset link"}

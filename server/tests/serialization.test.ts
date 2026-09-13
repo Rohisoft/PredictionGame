@@ -15,16 +15,28 @@ import { getMyBetHistory } from "../src/services/betService.js";
 
 describe("JSON serialization shape", () => {
   it("User -> profile shape, never leaks passwordHash", async () => {
-    const user = await User.create({ email: "shape@test.local", passwordHash: "secret-hash", fullName: "Shape Test" });
+    const user = await User.create({
+      username: "shapetest",
+      email: "shape@test.local",
+      passwordHash: "secret-hash",
+      fullName: "Shape Test",
+    });
     const json = user.toJSON();
 
-    expect(json).toMatchObject({ id: expect.any(String), full_name: "Shape Test", email: "shape@test.local", is_admin: false });
+    expect(json).toMatchObject({
+      id: expect.any(String),
+      username: "shapetest",
+      full_name: "Shape Test",
+      email: "shape@test.local",
+      is_admin: false,
+      must_change_password: true,
+    });
     expect(json).not.toHaveProperty("passwordHash");
     expect(json).not.toHaveProperty("_id");
   });
 
   it("Wallet -> user_id/balance shape", async () => {
-    const user = await User.create({ email: "wallet@test.local", passwordHash: "x" });
+    const user = await User.create({ username: "wallettest", passwordHash: "x" });
     const wallet = await Wallet.create({ userId: user._id, balance: 42 });
     const json = wallet.toJSON();
 
@@ -54,7 +66,7 @@ describe("JSON serialization shape", () => {
   });
 
   it("Bet -> selected_side/payout_amount shape, with nested game_rounds when the round is populated", async () => {
-    const user = await User.create({ email: "bet@test.local", passwordHash: "x" });
+    const user = await User.create({ username: "bettest", passwordHash: "x" });
     const round = await GameRound.create({
       roundNumber: 2,
       status: "completed",

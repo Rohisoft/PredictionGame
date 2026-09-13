@@ -14,9 +14,12 @@ export type BetStatus = "pending" | "won" | "lost" | "refunded";
 
 export interface Profile {
   id: string;
+  username: string;
   full_name: string | null;
   email: string | null;
+  phone: string | null;
   is_admin: boolean;
+  must_change_password: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
-import { User } from "../models/User.js";
+import { User, USERNAME_PATTERN } from "../models/User.js";
 import { Wallet } from "../models/Wallet.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
 import { HttpError } from "../utils/asyncHandler.js";
+import { hashPassword } from "../utils/password.js";
 import { createUserAccount } from "./authService.js";
 
 async function requireAdminUser(adminUserId: string) {
@@ -12,18 +13,108 @@ async function requireAdminUser(adminUserId: string) {
   }
 }
 
+function normalizeCandidate(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_.]/g, "")
+    .slice(0, 30);
+}
+
 /**
- * Admin-only account creation: no password is set here at all. The person
- * activates their own account later by running the password-reset flow for
- * their email (there's no separate "activation token" system — setting a
- * password from null is the same operation resetPassword() already does
- * for an existing password).
+ * Checks whether `username` is free, and — if not — proposes a handful of
+ * available alternatives (optionally incorporating `phone`'s digits, since
+ * a phone number is a perfectly valid username under USERNAME_PATTERN).
  */
-export async function adminCreateUser(adminUserId: string, email: string, fullName: string) {
+export async function adminSuggestUsernames(adminUserId: string, usernameInput: string, phone?: string) {
   await requireAdminUser(adminUserId);
-  const userId = await createUserAccount(email, fullName, null);
-  const user = await User.findById(userId).select("email fullName isAdmin createdAt updatedAt");
-  return user;
+
+  const base = normalizeCandidate(usernameInput);
+  if (!USERNAME_PATTERN.test(base)) {
+    throw new HttpError(400, "Username must be 3-30 characters: letters, numbers, '.' or '_' only");
+  }
+
+  const existing = await User.findOne({ username: base }).select("username");
+  if (!existing) {
+    return { available: true, suggestions: [] as string[] };
+  }
+
+  const candidates: string[] = [];
+  const phoneDigits = phone?.replace(/\D/g, "");
+
+  if (phoneDigits && phoneDigits.length >= 4) {
+    candidates.push(normalizeCandidate(`${base}${phoneDigits.slice(-4)}`));
+    candidates.push(normalizeCandidate(`${base}_${phoneDigits.slice(-4)}`));
+    if (phoneDigits.length >= 6 && USERNAME_PATTERN.test(phoneDigits)) {
+      candidates.push(phoneDigits);
+    }
+  }
+  for (let i = 1; i <= 20 && candidates.length < 10; i++) {
+    candidates.push(normalizeCandidate(`${base}${i}`));
+  }
+  for (let i = 0; i < 3; i++) {
+    candidates.push(normalizeCandidate(`${base}${Math.floor(100 + Math.random() * 900)}`));
+  }
+
+  const uniqueCandidates = Array.from(new Set(candidates)).filter((c) => USERNAME_PATTERN.test(c));
+  const taken = await User.find({ username: { $in: uniqueCandidates } }).select("username");
+  const takenSet = new Set(taken.map((u) => u.username));
+
+  const suggestions = uniqueCandidates.filter((c) => !takenSet.has(c)).slice(0, 5);
+  return { available: false, suggestions };
+}
+
+export interface AdminCreateUserInput {
+  username: string;
+  password: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+}
+
+/**
+ * Admin-only account creation — the admin picks the initial password too.
+ * `mustChangePassword` defaults to true (see createUserAccount), so the
+ * frontend routes the person to set their own password right after their
+ * first successful login.
+ */
+export async function adminCreateUser(adminUserId: string, input: AdminCreateUserInput) {
+  await requireAdminUser(adminUserId);
+
+  const username = normalizeCandidate(input.username);
+  if (!USERNAME_PATTERN.test(username)) {
+    throw new HttpError(400, "Username must be 3-30 characters: letters, numbers, '.' or '_' only");
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  const userId = await createUserAccount({
+    username,
+    fullName: input.fullName,
+    passwordHash,
+    email: input.email || null,
+    phone: input.phone || null,
+  });
+
+  return User.findById(userId).select("username email phone fullName isAdmin mustChangePassword createdAt updatedAt");
+}
+
+/**
+ * Admin resets someone's password directly — for recovery when the person
+ * has no email on file (so "forgot password" has nowhere to send a link)
+ * or is otherwise locked out. Forces a change on their next login and
+ * signs out any existing session, same as a normal password reset.
+ */
+export async function adminSetUserPassword(adminUserId: string, targetUsername: string, newPassword: string) {
+  await requireAdminUser(adminUserId);
+
+  const targetUser = await User.findOne({ username: targetUsername.toLowerCase() });
+  if (!targetUser) {
+    throw new HttpError(404, "No user found with that username");
+  }
+
+  targetUser.passwordHash = await hashPassword(newPassword);
+  targetUser.mustChangePassword = true;
+  targetUser.refreshTokenHash = null;
+  await targetUser.save();
 }
 
 /**
@@ -38,7 +129,9 @@ export async function adminListUsers(callerId: string, search: string | undefine
   const filter = search
     ? {
         $or: [
+          { username: { $regex: search, $options: "i" } },
           { email: { $regex: search, $options: "i" } },
+          { phone: { $regex: search, $options: "i" } },
           { fullName: { $regex: search, $options: "i" } },
         ],
       }
@@ -68,7 +161,7 @@ export async function adminGetUserTransactions(callerId: string, targetUserId: s
  */
 export async function adminAdjustPoints(
   adminUserId: string,
-  targetEmail: string,
+  targetUsername: string,
   amount: number,
   description?: string,
 ) {
@@ -78,9 +171,9 @@ export async function adminAdjustPoints(
     throw new HttpError(400, "Amount must not be zero");
   }
 
-  const targetUser = await User.findOne({ email: targetEmail.toLowerCase() });
+  const targetUser = await User.findOne({ username: targetUsername.toLowerCase() });
   if (!targetUser) {
-    throw new HttpError(404, "No user found with that email");
+    throw new HttpError(404, "No user found with that username");
   }
 
   const session = await mongoose.startSession();

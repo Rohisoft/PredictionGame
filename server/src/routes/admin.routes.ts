@@ -6,8 +6,16 @@ import {
   adminCreateUser,
   adminGetUserTransactions,
   adminListUsers,
+  adminSetUserPassword,
+  adminSuggestUsernames,
 } from "../services/adminService.js";
-import { adminAdjustPointsSchema, adminCreateUserSchema, adminListUsersSchema } from "../validation.js";
+import {
+  adminAdjustPointsSchema,
+  adminCreateUserSchema,
+  adminListUsersSchema,
+  adminSetPasswordSchema,
+  adminSuggestUsernameSchema,
+} from "../validation.js";
 
 export const adminRouter = Router();
 
@@ -22,12 +30,30 @@ adminRouter.get(
   }),
 );
 
+adminRouter.get(
+  "/users/check-username",
+  asyncHandler(async (req, res) => {
+    const { username, phone } = adminSuggestUsernameSchema.parse(req.query);
+    const result = await adminSuggestUsernames(req.userId!, username, phone);
+    res.json(result);
+  }),
+);
+
 adminRouter.post(
   "/users",
   asyncHandler(async (req, res) => {
-    const { email, fullName } = adminCreateUserSchema.parse(req.body);
-    const user = await adminCreateUser(req.userId!, email, fullName);
+    const input = adminCreateUserSchema.parse(req.body);
+    const user = await adminCreateUser(req.userId!, input);
     res.status(201).json(user);
+  }),
+);
+
+adminRouter.post(
+  "/users/set-password",
+  asyncHandler(async (req, res) => {
+    const { username, password } = adminSetPasswordSchema.parse(req.body);
+    await adminSetUserPassword(req.userId!, username, password);
+    res.json({ ok: true });
   }),
 );
 
@@ -42,8 +68,8 @@ adminRouter.get(
 adminRouter.post(
   "/adjust-points",
   asyncHandler(async (req, res) => {
-    const { userEmail, amount, description } = adminAdjustPointsSchema.parse(req.body);
-    await adminAdjustPoints(req.userId!, userEmail, amount, description);
+    const { username, amount, description } = adminAdjustPointsSchema.parse(req.body);
+    await adminAdjustPoints(req.userId!, username, amount, description);
     res.json({ ok: true });
   }),
 );

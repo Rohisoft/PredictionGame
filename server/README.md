@@ -59,15 +59,27 @@ advancing.
 
 ## Auth model
 
-Custom JWT auth, no external auth provider, **no public self-signup**:
-accounts are created by an admin (`POST /admin/users`, email + full name,
-no password) and the person activates their own account by running the
-"forgot password" flow for their email — there's no separate activation
-token system; setting a password from `null` is the same operation as
-resetting an existing one (`authService.resetPassword`). Logging in
-against an account with no password yet fails with a distinct message
-telling the person to use "forgot password" instead of a generic
-invalid-credentials error.
+Custom JWT auth, no external auth provider, **no public self-signup**, and
+**username is the login identifier** — not email. Accounts are created by
+an admin (`POST /admin/users`: username + an admin-chosen initial password
++ full name, with email/phone optional), and the account is flagged
+`mustChangePassword: true`. The frontend forces a change-password step
+right after that account's first successful login
+(`POST /auth/change-password`, `ProtectedRoute` redirects there whenever
+`profile.must_change_password` is true). Email (when present) is only used
+to deliver "forgot password" links for later recovery — it's not how
+anyone signs in.
+
+If a user has no email on file (or is otherwise locked out) and needs a
+password reset, an admin can set one directly:
+`POST /admin/users/set-password` — this re-flags `mustChangePassword: true`
+and invalidates any existing session, the same as a normal reset would.
+
+Since usernames are the identifier, `POST /admin/users` and
+`GET /admin/users/check-username` also support suggesting available
+alternatives when a desired username is taken (optionally incorporating a
+phone number's digits, since a phone number is itself a valid username
+under `USERNAME_PATTERN` — letters/digits/`.`/`_`, 3-30 chars).
 
 - Passwords hashed with bcrypt (12 rounds).
 - On login, an access token (short-lived) and refresh token (long-lived)
@@ -91,10 +103,11 @@ All routes are under `/api`. Endpoints other than `/server-time` and the
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/server-time` | For the frontend's clock-offset countdown sync |
-| POST | `/auth/login` | `{ email, password }` — fails with a distinct message if the account has no password set yet |
+| POST | `/auth/login` | `{ username, password }` |
 | POST | `/auth/refresh` | Rotates the access/refresh cookies |
 | POST | `/auth/logout` | Auth required |
-| POST | `/auth/forgot-password` | `{ email }` — always returns `{ ok: true }`, doesn't leak whether the email exists |
+| POST | `/auth/change-password` | Auth required — `{ currentPassword, newPassword }`, clears `mustChangePassword` |
+| POST | `/auth/forgot-password` | `{ username }` — always returns `{ ok: true }`; emails a reset link only if the account has an email on file |
 | POST | `/auth/reset-password` | `{ token, password }` |
 | GET | `/profile` | Current user |
 | GET | `/wallet` | Current balance |
@@ -106,9 +119,11 @@ All routes are under `/api`. Endpoints other than `/server-time` and the
 | GET | `/bets/mine?limit=50` | Bet history, with round populated |
 | GET | `/bets/mine/round/:roundId` | This user's bet (if any) on a specific round |
 | GET | `/admin/users?search=&limit=` | Admin only — list users with their wallet balance |
-| POST | `/admin/users` | Admin only — `{ email, fullName }`, creates user + wallet + 100pt bonus, no password set |
+| GET | `/admin/users/check-username?username=&phone=` | Admin only — availability + suggested alternatives if taken |
+| POST | `/admin/users` | Admin only — `{ username, password, fullName, email?, phone? }`, creates user + wallet + 100pt bonus |
+| POST | `/admin/users/set-password` | Admin only — `{ username, password }`, resets someone's password directly (e.g. no email on file / locked out) |
 | GET | `/admin/users/:id/transactions` | Admin only — a specific user's transaction history |
-| POST | `/admin/adjust-points` | Admin only — `{ userEmail, amount, description? }`; positive credits, negative debits (never below zero) |
+| POST | `/admin/adjust-points` | Admin only — `{ username, amount, description? }`; positive credits, negative debits (never below zero) |
 
 There's no round-settlement endpoint exposed over HTTP at all —
 `settleRound`/`createNextRound`/`tickRounds` are only ever called from
@@ -119,30 +134,32 @@ Postgres functions were never granted to the `authenticated` role.
 
 `POST /admin/users` (creating an account) requires an existing admin — so
 the very first admin has to be created directly in the database once, the
-same way `adminCreateUser` would: insert the user (no password), a wallet
-with the welcome bonus, and set `isAdmin: true`.
+same way `adminCreateUser` would: insert the user with a bcrypt hash of a
+password you pick, a wallet with the welcome bonus, and `isAdmin: true`.
 
 ```js
-// mongosh, against the app's database
+// In Node, first hash a password: require("bcryptjs").hashSync("your-temp-password", 12)
+// Then, in mongosh against the app's database:
 const userId = new ObjectId();
 db.users.insertOne({
   _id: userId,
-  email: "you@example.com",
+  username: "admin",
   fullName: "Admin",
   isAdmin: true,
-  passwordHash: null,
+  mustChangePassword: true,
+  passwordHash: "<paste the bcrypt hash here>",
   createdAt: new Date(),
   updatedAt: new Date(),
 });
 db.wallets.insertOne({ userId, balance: 100, createdAt: new Date(), updatedAt: new Date() });
 ```
 
-Then use the app's "Forgot password" flow for `you@example.com` to set a
-password (the reset link is logged to the server console unless SMTP is
-configured — see the environment variables above). From then on, that
-account can create every other user via the admin page, and promote
-further admins the same way if it ever needs to (no self-serve promotion
-endpoint, by design — flip `isAdmin` directly in the database for that).
+Log in as `admin` with the temp password you hashed — `mustChangePassword`
+being `true` means the app immediately routes you to set your own password.
+From then on, that account can create every other user via the admin page,
+and promote further admins the same way if it ever needs to (no self-serve
+promotion endpoint, by design — flip `isAdmin` directly in the database for
+that).
 
 ## Testing
 
@@ -155,10 +172,11 @@ reason production needs Atlas — transactions) so `placeBet`/`settleRound`
 run against a real, disposable MongoDB rather than mocks. Covers: invalid
 stake rejection, insufficient-balance rejection, betting-after-deadline
 rejection, duplicate-bet-per-round rejection, win/loss payout math,
-settlement idempotency, account creation's wallet+bonus setup, login
-success/failure (including the no-password-yet case), the password-reset /
-first-time-activation flow, and admin user management (listing, search,
-credit/debit with the below-zero guard, account creation).
+settlement idempotency, account creation's wallet+bonus setup, username-
+based login success/failure, `changePassword`, password-reset recovery,
+and admin user management (listing, search, credit/debit with the
+below-zero guard, account creation, username availability/suggestions,
+and admin-driven password resets).
 
 The first run downloads a MongoDB binary for `mongodb-memory-server` — this
 needs network access and may be slow or fail in a sandboxed/offline CI

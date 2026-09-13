@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { LoginPage } from "@/pages/LoginPage";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
+import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 import { LandingPage } from "@/pages/LandingPage";
 import { GamePage } from "@/pages/GamePage";
 import { WalletPage } from "@/pages/WalletPage";
@@ -26,6 +27,14 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute>
+                  <ChangePasswordPage />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/play"

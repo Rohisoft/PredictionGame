@@ -1,12 +1,26 @@
 import { Schema, model, type InferSchemaType } from "mongoose";
 
+// Login identifier. Letters/digits/underscore/dot only, so a phone number
+// (digits) works fine as a username too, per how admin account creation
+// uses it.
+export const USERNAME_PATTERN = /^[a-z0-9_.]{3,30}$/;
+
 const userSchema = new Schema(
   {
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    // null until the user sets their own password — accounts are created
-    // by an admin with no password, then activated via the password-reset
-    // flow (see authService.resetPassword).
+    username: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    // Optional contact info — neither is the login identifier anymore.
+    // email (when present) is only used to deliver "forgot password"
+    // links. No `default` here on purpose: a sparse unique index only
+    // skips documents where the field is truly absent, not ones where
+    // it's explicitly `null` — a `default: null` would give every
+    // email-less user an explicit null and they'd collide on the index.
+    email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+    phone: { type: String, default: null, trim: true },
     passwordHash: { type: String, default: null },
+    // True right after an admin creates the account (or resets someone's
+    // password) — the frontend forces a change-password step before
+    // letting the person into the app.
+    mustChangePassword: { type: Boolean, default: true },
     fullName: { type: String, default: null },
     isAdmin: { type: Boolean, default: false },
     // Hash of the single currently-valid refresh token, so logout / login
@@ -26,9 +40,12 @@ userSchema.set("toJSON", {
   transform(_doc, ret) {
     return {
       id: ret._id.toString(),
+      username: ret.username,
       full_name: ret.fullName ?? null,
-      email: ret.email,
+      email: ret.email ?? null,
+      phone: ret.phone ?? null,
       is_admin: ret.isAdmin ?? false,
+      must_change_password: ret.mustChangePassword ?? false,
       created_at: ret.createdAt,
       updated_at: ret.updatedAt,
     };

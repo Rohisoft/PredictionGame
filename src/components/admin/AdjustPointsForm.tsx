@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils";
 
 const PRESETS = [-100, -50, 50, 100, 500] as const;
 
-const formSchema = adminAdjustPointsSchema.omit({ userEmail: true });
+const formSchema = adminAdjustPointsSchema.omit({ username: true });
 type FormInput = z.infer<typeof formSchema>;
 
 interface AdjustPointsFormProps {
-  userEmail: string;
+  username: string;
   onDone?: () => void;
 }
 
-export function AdjustPointsForm({ userEmail, onDone }: AdjustPointsFormProps) {
+export function AdjustPointsForm({ username, onDone }: AdjustPointsFormProps) {
   const {
     register,
     handleSubmit,
@@ -31,11 +31,11 @@ export function AdjustPointsForm({ userEmail, onDone }: AdjustPointsFormProps) {
 
   async function onSubmit(values: FormInput) {
     try {
-      await adjustPoints.mutateAsync({ ...values, userEmail });
+      await adjustPoints.mutateAsync({ ...values, username });
       toast.success(
         values.amount > 0
-          ? `Credited ${values.amount} points to ${userEmail}`
-          : `Debited ${Math.abs(values.amount)} points from ${userEmail}`,
+          ? `Credited ${values.amount} points to @${username}`
+          : `Debited ${Math.abs(values.amount)} points from @${username}`,
       );
       reset();
       onDone?.();
@@ -66,11 +66,11 @@ export function AdjustPointsForm({ userEmail, onDone }: AdjustPointsFormProps) {
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
         <div className="flex-1 space-y-1">
-          <Label htmlFor={`amount-${userEmail}`} className="text-xs">
+          <Label htmlFor={`amount-${username}`} className="text-xs">
             Amount (negative to debit)
           </Label>
           <Input
-            id={`amount-${userEmail}`}
+            id={`amount-${username}`}
             type="number"
             step="1"
             placeholder="e.g. 100 or -50"
@@ -79,10 +79,10 @@ export function AdjustPointsForm({ userEmail, onDone }: AdjustPointsFormProps) {
           {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
         </div>
         <div className="flex-1 space-y-1">
-          <Label htmlFor={`description-${userEmail}`} className="text-xs">
+          <Label htmlFor={`description-${username}`} className="text-xs">
             Note (optional)
           </Label>
-          <Input id={`description-${userEmail}`} placeholder="Manual adjustment" {...register("description")} />
+          <Input id={`description-${username}`} placeholder="Manual adjustment" {...register("description")} />
         </div>
       </div>
       <Button type="submit" size="sm" disabled={adjustPoints.isPending} className="w-full sm:w-auto">

@@ -8,7 +8,8 @@ import { WalletTransaction } from "../src/models/WalletTransaction.js";
 import { placeBet, settleRound } from "../src/services/gameService.js";
 
 async function makeUserWithWallet(balance = 100) {
-  const user = await User.create({ email: `${new mongoose.Types.ObjectId()}@test.local`, passwordHash: "x" });
+  const username = `user${new mongoose.Types.ObjectId().toString()}`;
+  const user = await User.create({ username, passwordHash: "x" });
   const wallet = await Wallet.create({ userId: user._id, balance });
   return { user, wallet };
 }
