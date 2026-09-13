@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Dices, History, LogOut, ShieldCheck, User, Wallet } from "lucide-react";
+import { Crown, Dices, History, LogOut, ShieldCheck, User, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
@@ -61,6 +61,20 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <ShieldCheck className="h-4 w-4" />
                 Admin
+              </NavLink>
+            )}
+            {profile?.is_super_admin && (
+              <NavLink
+                to="/superadmin"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    isActive && "bg-secondary text-foreground",
+                  )
+                }
+              >
+                <Crown className="h-4 w-4" />
+                Super Admin
               </NavLink>
             )}
           </nav>

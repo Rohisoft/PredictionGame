@@ -26,7 +26,11 @@ export function ProfilePage() {
           </div>
           <CardTitle>{profile?.full_name ?? "Player"}</CardTitle>
           <p className="text-sm text-muted-foreground">@{user?.username}</p>
-          {profile?.is_admin && <Badge>Admin</Badge>}
+          {profile?.is_super_admin ? (
+            <Badge>Super Admin</Badge>
+          ) : (
+            profile?.is_admin && <Badge>Admin</Badge>
+          )}
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {profile?.email && (

@@ -15,6 +15,7 @@ import { WalletPage } from "@/pages/WalletPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { HistoryPage } from "@/pages/HistoryPage";
 import { AdminPage } from "@/pages/AdminPage";
+import { SuperAdminPage } from "@/pages/SuperAdminPage";
 
 function App() {
   return (
@@ -82,6 +83,16 @@ function App() {
                 <ProtectedRoute>
                   <AppShell>
                     <AdminPage />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <SuperAdminPage />
                   </AppShell>
                 </ProtectedRoute>
               }
