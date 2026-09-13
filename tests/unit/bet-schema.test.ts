@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { betSchema, adminAddPointsSchema } from "@/schemas/bet";
+import { betSchema } from "@/schemas/bet";
 
 describe("betSchema", () => {
   it("accepts each allowed stake amount", () => {
@@ -37,26 +37,6 @@ describe("betSchema", () => {
       selectedSide: "odd",
       amount: 10,
     });
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("adminAddPointsSchema", () => {
-  it("accepts a positive amount and valid email", () => {
-    const result = adminAddPointsSchema.safeParse({
-      userEmail: "player@example.com",
-      amount: 100,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects a zero or negative amount", () => {
-    expect(adminAddPointsSchema.safeParse({ userEmail: "a@b.com", amount: 0 }).success).toBe(false);
-    expect(adminAddPointsSchema.safeParse({ userEmail: "a@b.com", amount: -5 }).success).toBe(false);
-  });
-
-  it("rejects an invalid email", () => {
-    const result = adminAddPointsSchema.safeParse({ userEmail: "not-an-email", amount: 10 });
     expect(result.success).toBe(false);
   });
 });

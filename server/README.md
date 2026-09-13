@@ -98,7 +98,9 @@ All routes are under `/api`. Endpoints other than `/server-time` and the
 | POST | `/bets` | `{ roundId, selectedSide, amount }` |
 | GET | `/bets/mine?limit=50` | Bet history, with round populated |
 | GET | `/bets/mine/round/:roundId` | This user's bet (if any) on a specific round |
-| POST | `/admin/add-points` | Admin only — `{ userEmail, amount, description? }` |
+| GET | `/admin/users?search=&limit=` | Admin only — list users with their wallet balance |
+| GET | `/admin/users/:id/transactions` | Admin only — a specific user's transaction history |
+| POST | `/admin/adjust-points` | Admin only — `{ userEmail, amount, description? }`; positive credits, negative debits (never below zero) |
 
 There's no round-settlement endpoint exposed over HTTP at all —
 `settleRound`/`createNextRound`/`tickRounds` are only ever called from

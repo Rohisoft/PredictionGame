@@ -10,11 +10,3 @@ export const betSchema = z.object({
 });
 
 export type BetInput = z.infer<typeof betSchema>;
-
-export const adminAddPointsSchema = z.object({
-  userEmail: z.string().trim().email("Enter a valid email address"),
-  amount: z.number().positive("Amount must be greater than 0"),
-  description: z.string().trim().max(200).optional(),
-});
-
-export type AdminAddPointsInput = z.infer<typeof adminAddPointsSchema>;

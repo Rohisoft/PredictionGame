@@ -27,8 +27,14 @@ export const placeBetSchema = z.object({
   amount: z.number().refine((v) => STAKE_AMOUNTS.includes(v as (typeof STAKE_AMOUNTS)[number])),
 });
 
-export const adminAddPointsSchema = z.object({
+export const adminAdjustPointsSchema = z.object({
   userEmail: z.string().trim().email(),
-  amount: z.number().positive(),
+  // Positive to credit, negative to debit — never zero.
+  amount: z.number().refine((v) => v !== 0, { message: "Amount must not be zero" }),
   description: z.string().trim().max(200).optional(),
+});
+
+export const adminListUsersSchema = z.object({
+  search: z.string().trim().max(200).optional(),
+  limit: z.coerce.number().int().positive().max(200).optional(),
 });

@@ -4,19 +4,63 @@ import { Wallet } from "../models/Wallet.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
 import { HttpError } from "../utils/asyncHandler.js";
 
-/**
- * Credits a user's wallet. The route calling this already requires
- * `req.userId`'s own `isAdmin` flag via the `requireAdmin` middleware, but
- * this is re-checked here too since it's a mutation with real consequences.
- */
-export async function adminAddPoints(adminUserId: string, targetEmail: string, amount: number, description?: string) {
+async function requireAdminUser(adminUserId: string) {
   const admin = await User.findById(adminUserId).select("isAdmin");
   if (!admin?.isAdmin) {
     throw new HttpError(403, "Not authorized");
   }
+}
 
-  if (amount <= 0) {
-    throw new HttpError(400, "Amount must be positive");
+/**
+ * Lists users with their current wallet balance for the admin users table.
+ * Mongo has no cross-collection join, so this fetches users, then fetches
+ * just the wallets for those user ids, and merges them in memory — fine at
+ * the scale an admin-managed points system like this runs at.
+ */
+export async function adminListUsers(callerId: string, search: string | undefined, limit = 50) {
+  await requireAdminUser(callerId);
+
+  const filter = search
+    ? {
+        $or: [
+          { email: { $regex: search, $options: "i" } },
+          { fullName: { $regex: search, $options: "i" } },
+        ],
+      }
+    : {};
+
+  const users = await User.find(filter).sort({ createdAt: -1 }).limit(Math.min(limit, 200));
+  const userIds = users.map((u) => u._id);
+  const wallets = await Wallet.find({ userId: { $in: userIds } });
+  const balanceByUserId = new Map(wallets.map((w) => [w.userId.toString(), w.balance]));
+
+  return users.map((user) => {
+    const json = user.toJSON() as unknown as { id: string } & Record<string, unknown>;
+    return { ...json, balance: balanceByUserId.get(user._id.toString()) ?? 0 };
+  });
+}
+
+export async function adminGetUserTransactions(callerId: string, targetUserId: string, limit = 20) {
+  await requireAdminUser(callerId);
+  return WalletTransaction.find({ userId: targetUserId }).sort({ createdAt: -1 }).limit(limit);
+}
+
+/**
+ * Credits OR debits a user's wallet (positive amount = credit, negative =
+ * debit). The route calling this already requires `req.userId`'s own
+ * `isAdmin` flag via the `requireAdmin` middleware, but this is re-checked
+ * here too since it's a mutation with real consequences.
+ */
+export async function adminAdjustPoints(
+  adminUserId: string,
+  targetEmail: string,
+  amount: number,
+  description?: string,
+) {
+  await requireAdminUser(adminUserId);
+
+  if (amount === 0) {
+    throw new HttpError(400, "Amount must not be zero");
   }
 
   const targetUser = await User.findOne({ email: targetEmail.toLowerCase() });
@@ -30,11 +74,14 @@ export async function adminAddPoints(adminUserId: string, targetEmail: string, a
       const wallet = await Wallet.findOne({ userId: targetUser._id }).session(session);
       if (!wallet) throw new HttpError(404, "Wallet not found for that user");
 
+      // Condition-guarded so a debit can never push the balance negative,
+      // same pattern as the wallet debit in placeBet().
       const updatedWallet = await Wallet.findOneAndUpdate(
-        { _id: wallet._id },
+        { _id: wallet._id, balance: { $gte: -amount } },
         { $inc: { balance: amount } },
         { session, new: true },
       );
+      if (!updatedWallet) throw new HttpError(400, "That would take the user's balance below zero");
 
       await WalletTransaction.create(
         [
@@ -44,8 +91,8 @@ export async function adminAddPoints(adminUserId: string, targetEmail: string, a
             transactionType: "adjustment",
             amount,
             balanceBefore: wallet.balance,
-            balanceAfter: updatedWallet!.balance,
-            description: description ?? "Admin adjustment",
+            balanceAfter: updatedWallet.balance,
+            description: description ?? (amount > 0 ? "Admin credit" : "Admin debit"),
           },
         ],
         { session },
