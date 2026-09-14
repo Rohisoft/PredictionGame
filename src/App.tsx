@@ -12,6 +12,7 @@ import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 import { GamePage } from "@/pages/GamePage";
 import { ColorGamePage } from "@/pages/ColorGamePage";
 import { SpinPage } from "@/pages/SpinPage";
+import { MazePage } from "@/pages/MazePage";
 import { WalletPage } from "@/pages/WalletPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { HistoryPage } from "@/pages/HistoryPage";
@@ -55,6 +56,16 @@ function App() {
                 <ProtectedRoute>
                   <AppShell>
                     <ColorGamePage />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/maze"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <MazePage />
                   </AppShell>
                 </ProtectedRoute>
               }
