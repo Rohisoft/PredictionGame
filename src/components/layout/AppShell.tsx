@@ -80,10 +80,38 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="hidden rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground sm:block">
               {wallet ? `${formatPoints(wallet.balance)} pts` : "…"}
             </div>
+            {profile?.is_admin && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground sm:hidden",
+                    isActive && "bg-secondary text-foreground",
+                  )
+                }
+                aria-label="Admin"
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </NavLink>
+            )}
+            {profile?.is_super_admin && (
+              <NavLink
+                to="/superadmin"
+                className={({ isActive }) =>
+                  cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground sm:hidden",
+                    isActive && "bg-secondary text-foreground",
+                  )
+                }
+                aria-label="Super Admin"
+              >
+                <Crown className="h-4 w-4" />
+              </NavLink>
+            )}
             <button
               onClick={handleLogout}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
