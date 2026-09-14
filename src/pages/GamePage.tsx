@@ -7,9 +7,10 @@ import { RoundTimer } from "@/components/game/RoundTimer";
 import { PlaceBetPanel } from "@/components/game/PlaceBetPanel";
 import { DiceResult } from "@/components/game/DiceResult";
 import { RecentResults } from "@/components/game/RecentResults";
+import { BetPoolCard } from "@/components/game/BetPoolCard";
 import { RulesPanel } from "@/components/game/RulesPanel";
 import { BalanceCard } from "@/components/wallet/BalanceCard";
-import { useCurrentRound, useGameRunning, useRoundById } from "@/hooks/useCurrentRound";
+import { useCurrentRound, useGameRunning, useRoundBetStats, useRoundById } from "@/hooks/useCurrentRound";
 import { useMyBetForRound } from "@/hooks/useMyBets";
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { useServerTick } from "@/hooks/useServerTick";
@@ -78,6 +79,7 @@ export function GamePage() {
   }, [round, now, latest, activeRoundId]);
 
   const { data: myBet } = useMyBetForRound(round?.id);
+  const { data: betStats, isLoading: betStatsLoading } = useRoundBetStats(round?.id ?? null);
 
   if (!synced || !round) {
     return (
@@ -197,6 +199,8 @@ export function GamePage() {
           </CardContent>
         )}
       </Card>
+
+      <BetPoolCard stats={betStats} isLoading={betStatsLoading} />
 
       <Card>
         <CardHeader>

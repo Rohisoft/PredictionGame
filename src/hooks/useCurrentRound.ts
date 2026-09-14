@@ -46,3 +46,18 @@ export function useRoundById(roundId: string | null) {
     refetchInterval: (query) => (query.state.data?.status === "completed" ? false : 1_000),
   });
 }
+
+export interface RoundBetStats {
+  odd: { count: number; total: number };
+  even: { count: number; total: number };
+}
+
+/** How many players bet on each side, and how many points total — live while betting is open. */
+export function useRoundBetStats(roundId: string | null) {
+  return useQuery({
+    queryKey: ["round-bet-stats", roundId],
+    enabled: !!roundId,
+    queryFn: () => api.get<RoundBetStats>(`/rounds/${roundId}/stats`),
+    refetchInterval: 3_000,
+  });
+}

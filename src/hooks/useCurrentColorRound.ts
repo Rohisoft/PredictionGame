@@ -36,3 +36,18 @@ export function useColorRoundById(roundId: string | null) {
     refetchInterval: (query) => (query.state.data?.status === "completed" ? false : 1_000),
   });
 }
+
+export interface ColorRoundBetStats {
+  red: { count: number; total: number };
+  green: { count: number; total: number };
+}
+
+/** How many players bet on each color, and how many points total — live while betting is open. */
+export function useColorRoundBetStats(roundId: string | null) {
+  return useQuery({
+    queryKey: ["color-round-bet-stats", roundId],
+    enabled: !!roundId,
+    queryFn: () => api.get<ColorRoundBetStats>(`/color/rounds/${roundId}/stats`),
+    refetchInterval: 3_000,
+  });
+}

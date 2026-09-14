@@ -7,9 +7,15 @@ import { RoundTimer } from "@/components/game/RoundTimer";
 import { PlaceColorBetPanel } from "@/components/color/PlaceColorBetPanel";
 import { ColorResult } from "@/components/color/ColorResult";
 import { RecentColorResults } from "@/components/color/RecentColorResults";
+import { ColorPoolCard } from "@/components/color/ColorPoolCard";
 import { ColorRulesPanel } from "@/components/color/ColorRulesPanel";
 import { BalanceCard } from "@/components/wallet/BalanceCard";
-import { useColorGameEnabled, useCurrentColorRound, useColorRoundById } from "@/hooks/useCurrentColorRound";
+import {
+  useColorGameEnabled,
+  useColorRoundBetStats,
+  useCurrentColorRound,
+  useColorRoundById,
+} from "@/hooks/useCurrentColorRound";
 import { useMyColorBetForRound } from "@/hooks/useMyColorBets";
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { useServerTick } from "@/hooks/useServerTick";
@@ -65,6 +71,7 @@ export function ColorGamePage() {
   }, [round, now, latest, activeRoundId]);
 
   const { data: myBet } = useMyColorBetForRound(round?.id);
+  const { data: betStats, isLoading: betStatsLoading } = useColorRoundBetStats(round?.id ?? null);
 
   const isDisabled = gameEnabled?.enabled === false;
 
@@ -203,6 +210,8 @@ export function ColorGamePage() {
           </CardContent>
         )}
       </Card>
+
+      <ColorPoolCard stats={betStats} isLoading={betStatsLoading} />
 
       <Card>
         <CardHeader>

@@ -7,6 +7,7 @@ import {
   getRecentColorRounds,
   isColorGameEnabled,
 } from "../services/colorGameService.js";
+import { getColorRoundBetStats } from "../services/colorBetService.js";
 
 export const colorRoundsRouter = Router();
 
@@ -44,5 +45,13 @@ colorRoundsRouter.get(
     const round = await getColorRoundById(req.params.id);
     if (!round) throw new HttpError(404, "Round not found");
     res.json(round);
+  }),
+);
+
+colorRoundsRouter.get(
+  "/:id/stats",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    res.json(await getColorRoundBetStats(req.params.id));
   }),
 );
