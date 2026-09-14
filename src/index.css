@@ -135,13 +135,13 @@ a {
   font-size: 26px;
   margin-right: 5px;
 }
-nav {
+.header nav {
   display: flex;
   gap: 28px;
   font-size: 14px;
   color: #666;
 }
-nav a:hover {
+.header nav a:hover {
   color: #111;
 }
 .header-actions {
@@ -577,7 +577,7 @@ footer .logo {
   .menu-toggle {
     display: inline-flex;
   }
-  nav {
+  .header nav {
     display: none;
     position: absolute;
     top: 100%;
@@ -590,16 +590,16 @@ footer .logo {
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
     z-index: 30;
   }
-  nav.open {
+  .header nav.open {
     display: flex;
   }
-  nav a,
-  nav a:visited {
+  .header nav a,
+  .header nav a:visited {
     color: #333;
     padding: 12px 0;
     border-bottom: 1px solid #ececec;
   }
-  nav a:last-child {
+  .header nav a:last-child {
     border-bottom: none;
   }
   .hero {
