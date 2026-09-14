@@ -9,13 +9,13 @@ export function ColorRulesPanel() {
       <CardContent className="space-y-2 text-sm text-muted-foreground">
         <p>Each round lasts 60 seconds: 50 seconds to submit a prediction, then a 10 second reveal.</p>
         <p>
-          Pick Red, Green, or Violet, choose how many points to put on it, and submit your
-          prediction before the window closes.
+          Pick Red or Green, choose how many points to put on it, and submit your prediction
+          before the window closes.
         </p>
         <p>
-          One color is picked at random once per round by the server, with an equal 1-in-3 chance
-          for each. Get it right and you receive <strong>3× your points</strong> back (e.g. predict
-          with 50 points, win 150 points). Get it wrong and those points are gone.
+          One color is picked at random once per round by the server, with an equal 1-in-2 chance
+          for each. Get it right and you receive <strong>2× your points</strong> back (e.g. predict
+          with 50 points, win 100 points). Get it wrong and those points are gone.
         </p>
         <p>
           The result is generated securely on the server after predictions close — it can never be

@@ -10,12 +10,11 @@ interface ColorSelectorProps {
 const OPTIONS: { color: Color; label: string; swatch: string; ring: string }[] = [
   { color: "red", label: "Red", swatch: "bg-red-500", ring: "border-red-500" },
   { color: "green", label: "Green", swatch: "bg-green-500", ring: "border-green-500" },
-  { color: "violet", label: "Violet", swatch: "bg-violet-500", ring: "border-violet-500" },
 ];
 
 export function ColorSelector({ value, onChange, disabled }: ColorSelectorProps) {
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 gap-3">
       {OPTIONS.map((opt) => (
         <button
           key={opt.color}

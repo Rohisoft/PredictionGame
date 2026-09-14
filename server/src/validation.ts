@@ -34,7 +34,7 @@ export const placeBetSchema = z.object({
 
 export const placeColorBetSchema = z.object({
   roundId: z.string().min(1),
-  selectedColor: z.enum(["red", "green", "violet"]),
+  selectedColor: z.enum(["red", "green"]),
   amount: z.number().refine((v) => STAKE_AMOUNTS.includes(v as (typeof STAKE_AMOUNTS)[number])),
 });
 

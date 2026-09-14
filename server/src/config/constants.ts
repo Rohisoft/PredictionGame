@@ -3,9 +3,9 @@ export type StakeAmount = (typeof STAKE_AMOUNTS)[number];
 
 export const WELCOME_BONUS = 100;
 export const PAYOUT_MULTIPLIER = 2;
-// Fair odds for a 3-way bet (Red/Green/Violet, equal 1-in-3 chance each) —
-// same "no house edge" spirit as the 2x odd/even payout.
-export const COLOR_PAYOUT_MULTIPLIER = 3;
+// Fair odds for a 2-way bet (Red/Green, equal 1-in-2 chance each) — same
+// "no house edge" spirit as the odd/even payout.
+export const COLOR_PAYOUT_MULTIPLIER = 2;
 
 export const BETTING_DURATION_SECONDS = 50;
 export const ROUND_DURATION_SECONDS = 60;

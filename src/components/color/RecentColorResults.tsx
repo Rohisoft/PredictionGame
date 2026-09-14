@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 const SWATCH: Record<Color, string> = {
   red: "bg-red-500",
   green: "bg-green-500",
-  violet: "bg-violet-500",
 };
 
 export function RecentColorResults() {
@@ -14,8 +13,8 @@ export function RecentColorResults() {
 
   if (isLoading) {
     return (
-      <div className="flex gap-2">
-        {Array.from({ length: 10 }).map((_, i) => (
+      <div className="flex gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-9 w-9 flex-shrink-0 rounded-full" />
         ))}
       </div>
@@ -27,15 +26,17 @@ export function RecentColorResults() {
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex gap-3 overflow-x-auto pb-1">
       {rounds.map(
         (round) =>
           round.winning_color && (
-            <div
-              key={round.id}
-              title={`Round #${round.round_number} · ${round.winning_color}`}
-              className={cn("h-9 w-9 flex-shrink-0 rounded-full shadow-inner", SWATCH[round.winning_color])}
-            />
+            <div key={round.id} className="flex flex-shrink-0 flex-col items-center gap-1">
+              <div
+                title={round.winning_color}
+                className={cn("h-9 w-9 rounded-full shadow-inner", SWATCH[round.winning_color])}
+              />
+              <span className="text-[10px] text-muted-foreground">#{round.round_number}</span>
+            </div>
           ),
       )}
     </div>

@@ -8,7 +8,7 @@ import type { Color, ColorBet } from "@/types/database";
 import type { StakeAmount } from "@/types/game";
 import { cn } from "@/lib/utils";
 
-const COLOR_LABEL: Record<Color, string> = { red: "Red", green: "Green", violet: "Violet" };
+const COLOR_LABEL: Record<Color, string> = { red: "Red", green: "Green" };
 
 interface PlaceColorBetPanelProps {
   roundId: string;

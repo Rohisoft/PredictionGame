@@ -57,7 +57,7 @@ describe("placeColorBet", () => {
     const round = await ColorRound.create({ roundNumber: 3, status: "betting", ...makeRoundTimes(50_000) });
 
     await placeColorBet(user._id.toString(), round._id.toString(), "red", 20);
-    await expect(placeColorBet(user._id.toString(), round._id.toString(), "violet", 10)).rejects.toThrow(
+    await expect(placeColorBet(user._id.toString(), round._id.toString(), "green", 10)).rejects.toThrow(
       /already made a prediction/,
     );
   });
@@ -93,16 +93,14 @@ describe("placeColorBet", () => {
 });
 
 describe("settleColorRound", () => {
-  it("pays the winning color 3x stake and leaves the losing colors at zero", async () => {
-    const { user: winner, wallet: winnerWallet } = await makeUserWithWallet(100);
-    const { user: loserA, wallet: loserAWallet } = await makeUserWithWallet(100);
-    const { user: loserB, wallet: loserBWallet } = await makeUserWithWallet(100);
+  it("pays the winning color 2x stake and leaves the losing color at zero", async () => {
+    const { user: userA, wallet: walletA } = await makeUserWithWallet(100);
+    const { user: userB, wallet: walletB } = await makeUserWithWallet(100);
     const round = await ColorRound.create({ roundNumber: 7, status: "betting", ...makeRoundTimes(-1_000) });
 
     const bets = {
-      red: await ColorBet.create({ userId: winner._id, roundId: round._id, selectedColor: "red", amount: 50, status: "pending" }),
-      green: await ColorBet.create({ userId: loserA._id, roundId: round._id, selectedColor: "green", amount: 50, status: "pending" }),
-      violet: await ColorBet.create({ userId: loserB._id, roundId: round._id, selectedColor: "violet", amount: 50, status: "pending" }),
+      red: await ColorBet.create({ userId: userA._id, roundId: round._id, selectedColor: "red", amount: 50, status: "pending" }),
+      green: await ColorBet.create({ userId: userB._id, roundId: round._id, selectedColor: "green", amount: 50, status: "pending" }),
     };
 
     await settleColorRound(round._id.toString());
@@ -112,7 +110,7 @@ describe("settleColorRound", () => {
     expect(COLORS).toContain(settledRound?.winningColor);
 
     const winningColor = settledRound!.winningColor!;
-    const wallets = { red: winnerWallet, green: loserAWallet, violet: loserBWallet };
+    const wallets = { red: walletA, green: walletB };
 
     for (const color of COLORS) {
       const refreshedBet = await ColorBet.findById(bets[color]._id);

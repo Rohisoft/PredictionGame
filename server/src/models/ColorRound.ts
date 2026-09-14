@@ -3,7 +3,7 @@ import { Schema, model } from "mongoose";
 export const COLOR_ROUND_STATUSES = ["betting", "completed", "cancelled"] as const;
 export type ColorRoundStatus = (typeof COLOR_ROUND_STATUSES)[number];
 
-export const COLORS = ["red", "green", "violet"] as const;
+export const COLORS = ["red", "green"] as const;
 export type Color = (typeof COLORS)[number];
 
 const colorRoundSchema = new Schema(

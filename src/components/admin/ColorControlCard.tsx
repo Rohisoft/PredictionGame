@@ -38,7 +38,7 @@ export function ColorControlCard() {
         <div>
           <CardTitle>Color Prediction control</CardTitle>
           <CardDescription>
-            Turn the Red/Green/Violet game on or off for every player. Disabling it stops new
+            Turn the Red/Green game on or off for every player. Disabling it stops new
             rounds from opening; a round already in progress still settles and pays out normally.
           </CardDescription>
         </div>

@@ -143,7 +143,7 @@ export async function settleColorRound(roundId: string) {
         throw new Error("Betting deadline has not passed yet");
       }
 
-      // Cryptographically secure, uniform pick among the 3 colors — same
+      // Cryptographically secure, uniform pick among the colors — same
       // fairness pattern as the dice roll in gameService.settleRound().
       const winningColor: Color = COLORS[randomInt(0, COLORS.length)];
 

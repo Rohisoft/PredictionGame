@@ -77,7 +77,7 @@ export interface Bet {
 
 export type ColorRoundStatus = "betting" | "completed" | "cancelled";
 
-export type Color = "red" | "green" | "violet";
+export type Color = "red" | "green";
 
 export interface ColorRound {
   id: string;

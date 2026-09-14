@@ -23,7 +23,7 @@ const REVEAL_HOLD_MS = 4_000;
 /** Safety net in case a cron tick never settles a round (shouldn't happen). */
 const STUCK_ROUND_MS = 20_000;
 
-const COLOR_LABEL: Record<Color, string> = { red: "Red", green: "Green", violet: "Violet" };
+const COLOR_LABEL: Record<Color, string> = { red: "Red", green: "Green" };
 
 export function ColorGamePage() {
   const { getServerNow, synced } = useServerTimeOffset();

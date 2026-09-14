@@ -2,18 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import type { Color } from "@/types/database";
 import { cn } from "@/lib/utils";
 
-const CYCLE: Color[] = ["red", "green", "violet"];
+const CYCLE: Color[] = ["red", "green"];
 
 const SWATCH: Record<Color, string> = {
   red: "bg-red-500",
   green: "bg-green-500",
-  violet: "bg-violet-500",
 };
 
 const LABEL: Record<Color, string> = {
   red: "Red",
   green: "Green",
-  violet: "Violet",
 };
 
 interface ColorResultProps {
