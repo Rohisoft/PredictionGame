@@ -1,7 +1,7 @@
 import { Schema, model, Types } from "mongoose";
 import { idOf } from "../utils/serialize.js";
 
-export const TRANSACTION_TYPES = ["deposit", "withdrawal", "bet", "payout", "refund", "adjustment"] as const;
+export const TRANSACTION_TYPES = ["deposit", "withdrawal", "bet", "payout", "refund", "adjustment", "bonus"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
 const walletTransactionSchema = new Schema(

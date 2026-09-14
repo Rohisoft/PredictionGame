@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Crown, Dices, History, LogOut, ShieldCheck, User, Wallet } from "lucide-react";
+import { Crown, Dices, Gift, History, LogOut, ShieldCheck, User, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useWallet } from "@/hooks/useWallet";
@@ -8,6 +8,7 @@ import { formatPoints, cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/play", label: "Play", icon: Dices },
+  { to: "/spin", label: "Spin", icon: Gift },
   { to: "/wallet", label: "Wallet", icon: Wallet },
   { to: "/history", label: "History", icon: History },
   { to: "/profile", label: "Profile", icon: User },

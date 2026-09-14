@@ -36,6 +36,9 @@ const userSchema = new Schema(
     refreshTokenHash: { type: String, default: null },
     passwordResetTokenHash: { type: String, default: null },
     passwordResetExpires: { type: Date, default: null },
+    // Daily Spin & Win — last successful claim, used to gate the next one.
+    // Not exposed via toJSON; the /spin routes have their own response shape.
+    lastSpinAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

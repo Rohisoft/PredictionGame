@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 import { GamePage } from "@/pages/GamePage";
+import { SpinPage } from "@/pages/SpinPage";
 import { WalletPage } from "@/pages/WalletPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { HistoryPage } from "@/pages/HistoryPage";
@@ -53,6 +54,16 @@ function App() {
                 <ProtectedRoute>
                   <AppShell>
                     <WalletPage />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/spin"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <SpinPage />
                   </AppShell>
                 </ProtectedRoute>
               }
