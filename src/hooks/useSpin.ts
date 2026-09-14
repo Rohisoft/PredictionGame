@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 
 export interface SpinState {
+  enabled: boolean;
   can_spin: boolean;
   next_spin_at: string | null;
   segments: number[];

@@ -4,7 +4,7 @@ import { User } from "../src/models/User.js";
 import { Wallet } from "../src/models/Wallet.js";
 import { WalletTransaction } from "../src/models/WalletTransaction.js";
 import { SPIN_COOLDOWN_MS, SPIN_SEGMENTS } from "../src/config/constants.js";
-import { getSpinState, spinWheel } from "../src/services/spinService.js";
+import { getSpinState, isSpinEnabled, setSpinEnabled, spinWheel } from "../src/services/spinService.js";
 
 async function makeUserWithWallet(balance = 0) {
   const username = `user${new mongoose.Types.ObjectId().toString()}`;
@@ -92,5 +92,30 @@ describe("spinWheel", () => {
     const rejected = results.filter((r) => r.status === "rejected");
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
+  });
+});
+
+describe("Spin & Win on/off switch", () => {
+  it("defaults to enabled when no settings document exists yet", async () => {
+    expect(await isSpinEnabled()).toBe(true);
+  });
+
+  it("setSpinEnabled(false) blocks new spins and getSpinState reflects it", async () => {
+    const { user } = await makeUserWithWallet();
+
+    await setSpinEnabled(false);
+    expect(await isSpinEnabled()).toBe(false);
+
+    const state = await getSpinState(user._id.toString());
+    expect(state.enabled).toBe(false);
+    expect(state.canSpin).toBe(false);
+
+    await expect(spinWheel(user._id.toString())).rejects.toThrow(/currently disabled/);
+
+    // No spin was actually claimed while disabled — re-enabling immediately
+    // still lets this same user spin.
+    await setSpinEnabled(true);
+    const result = await spinWheel(user._id.toString());
+    expect(result.value).toBeGreaterThanOrEqual(0);
   });
 });

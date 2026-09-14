@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { User } from "../models/User.js";
 import { Wallet } from "../models/Wallet.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
+import { GameSettings, GAME_SETTINGS_ID } from "../models/GameSettings.js";
 import { HttpError } from "../utils/asyncHandler.js";
 import { SPIN_COOLDOWN_MS, SPIN_SEGMENTS } from "../config/constants.js";
 
@@ -22,14 +23,30 @@ function pickSegmentIndex(): number {
   return SPIN_SEGMENTS.length - 1;
 }
 
+export async function isSpinEnabled() {
+  const settings = await GameSettings.findById(GAME_SETTINGS_ID);
+  return settings?.isSpinEnabled ?? true;
+}
+
+export async function setSpinEnabled(enabled: boolean) {
+  await GameSettings.findByIdAndUpdate(
+    GAME_SETTINGS_ID,
+    { isSpinEnabled: enabled },
+    { upsert: true, setDefaultsOnInsert: true },
+  );
+  return { enabled };
+}
+
 export async function getSpinState(userId: string) {
   const user = await User.findById(userId).select("lastSpinAt");
   if (!user) throw new HttpError(404, "User not found");
 
+  const enabled = await isSpinEnabled();
   const nextSpinAt = user.lastSpinAt ? new Date(user.lastSpinAt.getTime() + SPIN_COOLDOWN_MS) : null;
-  const canSpin = !nextSpinAt || nextSpinAt.getTime() <= Date.now();
+  const canSpin = enabled && (!nextSpinAt || nextSpinAt.getTime() <= Date.now());
 
   return {
+    enabled,
     canSpin,
     nextSpinAt: canSpin ? null : nextSpinAt,
     segments: SPIN_SEGMENTS.map((segment) => segment.value),
@@ -37,6 +54,10 @@ export async function getSpinState(userId: string) {
 }
 
 export async function spinWheel(userId: string) {
+  if (!(await isSpinEnabled())) {
+    throw new HttpError(403, "Spin & Win is currently disabled");
+  }
+
   const session = await mongoose.startSession();
   try {
     let result: { segmentIndex: number; value: number; nextSpinAt: Date } | undefined;

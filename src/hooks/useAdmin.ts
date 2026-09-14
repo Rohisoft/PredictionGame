@@ -160,3 +160,35 @@ export function useSuperAdminAdjustAdminPoints() {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Superadmin-only: Spin & Win on/off switch.
+// ---------------------------------------------------------------------------
+
+export function useSuperAdminSpinState() {
+  return useQuery({
+    queryKey: ["superadmin-spin-state"],
+    queryFn: () => api.get<{ enabled: boolean }>("/superadmin/spin/state"),
+    refetchInterval: 15_000,
+  });
+}
+
+function useSetSpinEnabled(action: "enable" | "disable") {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.post<{ enabled: boolean }>(`/superadmin/spin/${action}`, {}),
+    onSuccess: (state) => {
+      queryClient.setQueryData(["superadmin-spin-state"], state);
+      queryClient.invalidateQueries({ queryKey: ["spin-state"] });
+    },
+  });
+}
+
+export function useEnableSpin() {
+  return useSetSpinEnabled("enable");
+}
+
+export function useDisableSpin() {
+  return useSetSpinEnabled("disable");
+}

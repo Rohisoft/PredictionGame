@@ -7,8 +7,8 @@ export const spinRouter = Router();
 
 spinRouter.use(requireAuth);
 
-function serializeState(state: { canSpin: boolean; nextSpinAt: Date | null; segments: number[] }) {
-  return { can_spin: state.canSpin, next_spin_at: state.nextSpinAt, segments: state.segments };
+function serializeState(state: { enabled: boolean; canSpin: boolean; nextSpinAt: Date | null; segments: number[] }) {
+  return { enabled: state.enabled, can_spin: state.canSpin, next_spin_at: state.nextSpinAt, segments: state.segments };
 }
 
 spinRouter.get(

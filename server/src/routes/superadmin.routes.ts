@@ -2,6 +2,7 @@ import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireAuth, requireSuperAdmin } from "../middleware/auth.js";
 import { superAdminAdjustAdminPoints, superAdminCreateAdmin, superAdminListAdmins } from "../services/adminService.js";
+import { isSpinEnabled, setSpinEnabled } from "../services/spinService.js";
 import { adminAdjustPointsSchema, adminCreateUserSchema, adminListUsersSchema } from "../validation.js";
 
 export const superAdminRouter = Router();
@@ -32,5 +33,30 @@ superAdminRouter.post(
     const { username, amount, description } = adminAdjustPointsSchema.parse(req.body);
     await superAdminAdjustAdminPoints(req.userId!, username, amount, description);
     res.json({ ok: true });
+  }),
+);
+
+// -----------------------------------------------------------------------
+// Spin & Win on/off switch — superadmin only.
+// -----------------------------------------------------------------------
+
+superAdminRouter.get(
+  "/spin/state",
+  asyncHandler(async (_req, res) => {
+    res.json({ enabled: await isSpinEnabled() });
+  }),
+);
+
+superAdminRouter.post(
+  "/spin/enable",
+  asyncHandler(async (_req, res) => {
+    res.json(await setSpinEnabled(true));
+  }),
+);
+
+superAdminRouter.post(
+  "/spin/disable",
+  asyncHandler(async (_req, res) => {
+    res.json(await setSpinEnabled(false));
   }),
 );

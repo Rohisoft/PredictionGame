@@ -10,12 +10,15 @@ const SINGLETON_ID = "singleton";
 const gameSettingsSchema = new Schema({
   _id: { type: String, default: SINGLETON_ID },
   isGameRunning: { type: Boolean, required: true, default: true },
+  // Superadmin-only switch for the Spin & Win daily bonus wheel.
+  isSpinEnabled: { type: Boolean, required: true, default: true },
 });
 
 gameSettingsSchema.set("toJSON", {
   transform(_doc, ret) {
     return {
       is_game_running: ret.isGameRunning,
+      is_spin_enabled: ret.isSpinEnabled,
     };
   },
 });

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AdminRow } from "@/components/admin/AdminRow";
 import { CreateAdminForm } from "@/components/admin/CreateAdminForm";
+import { SpinControlCard } from "@/components/admin/SpinControlCard";
 import { useProfile } from "@/hooks/useProfile";
 import { useSuperAdminAdmins } from "@/hooks/useAdmin";
 import { useWallet } from "@/hooks/useWallet";
@@ -36,6 +37,8 @@ export function SuperAdminPage() {
           <Crown className="h-10 w-10 opacity-70" />
         </CardContent>
       </Card>
+
+      <SpinControlCard />
 
       <Card>
         <CardHeader>

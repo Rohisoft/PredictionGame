@@ -68,7 +68,7 @@ export function SpinWheel() {
   const segments = state?.segments ?? Array.from({ length: 8 }, () => 0);
   const nextSpinMs = state?.next_spin_at ? new Date(state.next_spin_at).getTime() - now : 0;
   const cooldownElapsed = !state?.next_spin_at || nextSpinMs <= 0;
-  const canSpin = !!state && (state.can_spin || cooldownElapsed) && !animating && !spin.isPending;
+  const canSpin = !!state && state.enabled && (state.can_spin || cooldownElapsed) && !animating && !spin.isPending;
 
   async function handleSpin() {
     if (!canSpin) return;
@@ -138,7 +138,11 @@ export function SpinWheel() {
         </Button>
       ) : (
         <div className={cn("text-center text-sm text-muted-foreground", animating && "opacity-50")}>
-          {animating ? "Spinning…" : `Next free spin in ${formatCountdown(nextSpinMs)}`}
+          {!state?.enabled
+            ? "Spin & Win is currently unavailable — check back later."
+            : animating
+              ? "Spinning…"
+              : `Next free spin in ${formatCountdown(nextSpinMs)}`}
         </div>
       )}
     </div>
