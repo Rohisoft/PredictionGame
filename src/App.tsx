@@ -16,6 +16,7 @@ import { ProfilePage } from "@/pages/ProfilePage";
 import { HistoryPage } from "@/pages/HistoryPage";
 import { AdminPage } from "@/pages/AdminPage";
 import { SuperAdminPage } from "@/pages/SuperAdminPage";
+import HomePage from './pages/HomePage';
 
 function App() {
   return (
@@ -24,7 +25,8 @@ function App() {
         <AuthProvider>
           <Toaster position="top-center" richColors closeButton />
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/bonus-points" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
