@@ -46,6 +46,7 @@ function HomePage() {
   const [cartOpen, setCartOpen] = useState<boolean>(false);
   const [liked, setLiked] = useState<number[]>([]);
   const [notice, setNotice] = useState<string>("");
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
 
   const filteredProducts = useMemo<Product[]>(() => {
     return products.filter((product: Product) => {
@@ -127,11 +128,11 @@ function HomePage() {
           <span>✦</span> shopora
         </a>
 
-        <nav>
-          <a href="#shop">Shop</a>
-          <a href="#new">New arrivals</a>
-          <a href="#offers">Offers</a>
-           <Link to="/login">BonusPoints</Link>
+        <nav className={menuOpen ? "open" : ""}>
+          <a href="#shop" onClick={() => setMenuOpen(false)}>Shop</a>
+          <a href="#new" onClick={() => setMenuOpen(false)}>New arrivals</a>
+          <a href="#offers" onClick={() => setMenuOpen(false)}>Offers</a>
+          <Link to="/login" onClick={() => setMenuOpen(false)}>BonusPoints</Link>
         </nav>
 
         <div className="header-actions">
@@ -153,6 +154,15 @@ function HomePage() {
           >
             🛒
             {cartCount > 0 && <b>{cartCount}</b>}
+          </button>
+
+          <button
+            className="icon-btn menu-toggle"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? "✕" : "☰"}
           </button>
         </div>
       </header>

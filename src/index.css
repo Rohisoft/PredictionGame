@@ -124,6 +124,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  position: relative;
 }
 .logo {
   font-size: 23px;
@@ -170,6 +171,9 @@ nav a:hover {
   background: transparent;
   position: relative;
   font-size: 21px;
+}
+.menu-toggle {
+  display: none;
 }
 .icon-btn b {
   position: absolute;
@@ -570,8 +574,33 @@ footer .logo {
   .header {
     padding: 20px;
   }
+  .menu-toggle {
+    display: inline-flex;
+  }
   nav {
     display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    background: white;
+    padding: 8px 20px 12px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    z-index: 30;
+  }
+  nav.open {
+    display: flex;
+  }
+  nav a,
+  nav a:visited {
+    color: #333;
+    padding: 12px 0;
+    border-bottom: 1px solid #ececec;
+  }
+  nav a:last-child {
+    border-bottom: none;
   }
   .hero {
     margin: 10px 20px 50px;
