@@ -4,13 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ColorPoolCard } from "@/components/color/ColorPoolCard";
 import { useDisableColorGame, useEnableColorGame, useSuperAdminColorState } from "@/hooks/useAdmin";
+import { useColorRoundBetStats } from "@/hooks/useCurrentColorRound";
 import { ApiError } from "@/lib/apiClient";
 
 export function ColorControlCard() {
   const { data: state, isLoading } = useSuperAdminColorState();
   const enableColor = useEnableColorGame();
   const disableColor = useDisableColorGame();
+  const { data: betStats, isLoading: betStatsLoading } = useColorRoundBetStats(state?.current_round?.id ?? null);
 
   async function handleEnable() {
     try {
@@ -31,23 +34,30 @@ export function ColorControlCard() {
   }
 
   const enabled = state?.enabled ?? false;
+  const round = state?.current_round;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle>Color Prediction control</CardTitle>
-          <CardDescription>
-            Turn the Red/Green game on or off for every player. Disabling it stops new
-            rounds from opening; a round already in progress still settles and pays out normally.
-          </CardDescription>
-        </div>
-        {!isLoading && <Badge variant={enabled ? "success" : "destructive"}>{enabled ? "Enabled" : "Disabled"}</Badge>}
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : (
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Color Prediction control</CardTitle>
+            <CardDescription>
+              Turn the Red/Green game on or off for every player. Disabling it stops new
+              rounds from opening; a round already in progress still settles and pays out normally.
+            </CardDescription>
+          </div>
+          {!isLoading && <Badge variant={enabled ? "success" : "destructive"}>{enabled ? "Enabled" : "Disabled"}</Badge>}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {round ? `Round #${round.round_number} — ${round.status}` : "No round has been played yet."}
+            </p>
+          )}
+
           <div className="flex gap-2">
             <Button onClick={handleEnable} disabled={enabled || enableColor.isPending} className="gap-1.5">
               <Palette className="h-4 w-4" />
@@ -63,8 +73,10 @@ export function ColorControlCard() {
               Disable
             </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {round && <ColorPoolCard stats={betStats} isLoading={betStatsLoading} />}
+    </>
   );
 }

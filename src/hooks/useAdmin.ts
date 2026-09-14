@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
-import type { GameRound, Profile, WalletTransaction } from "@/types/database";
+import type { ColorRound, GameRound, Profile, WalletTransaction } from "@/types/database";
 
 export type AdminUser = Profile & { balance: number };
 
@@ -197,11 +197,16 @@ export function useDisableSpin() {
 // Superadmin-only: Color Prediction on/off switch.
 // ---------------------------------------------------------------------------
 
+export interface ColorControlState {
+  enabled: boolean;
+  current_round: ColorRound | null;
+}
+
 export function useSuperAdminColorState() {
   return useQuery({
     queryKey: ["superadmin-color-state"],
-    queryFn: () => api.get<{ enabled: boolean }>("/superadmin/color/state"),
-    refetchInterval: 15_000,
+    queryFn: () => api.get<ColorControlState>("/superadmin/color/state"),
+    refetchInterval: 5_000,
   });
 }
 
@@ -209,7 +214,7 @@ function useSetColorGameEnabled(action: "enable" | "disable") {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => api.post<{ enabled: boolean }>(`/superadmin/color/${action}`, {}),
+    mutationFn: () => api.post<ColorControlState>(`/superadmin/color/${action}`, {}),
     onSuccess: (state) => {
       queryClient.setQueryData(["superadmin-color-state"], state);
       queryClient.invalidateQueries({ queryKey: ["color-game-enabled"] });

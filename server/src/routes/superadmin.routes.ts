@@ -3,7 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireAuth, requireSuperAdmin } from "../middleware/auth.js";
 import { superAdminAdjustAdminPoints, superAdminCreateAdmin, superAdminListAdmins } from "../services/adminService.js";
 import { isSpinEnabled, setSpinEnabled } from "../services/spinService.js";
-import { isColorGameEnabled, setColorGameEnabled } from "../services/colorGameService.js";
+import { getColorGameState, setColorGameEnabled } from "../services/colorGameService.js";
 import { adminAdjustPointsSchema, adminCreateUserSchema, adminListUsersSchema } from "../validation.js";
 
 export const superAdminRouter = Router();
@@ -66,23 +66,27 @@ superAdminRouter.post(
 // Color Prediction on/off switch — superadmin only.
 // -----------------------------------------------------------------------
 
+function serializeColorState(state: { enabled: boolean; currentRound: unknown }) {
+  return { enabled: state.enabled, current_round: state.currentRound };
+}
+
 superAdminRouter.get(
   "/color/state",
   asyncHandler(async (_req, res) => {
-    res.json({ enabled: await isColorGameEnabled() });
+    res.json(serializeColorState(await getColorGameState()));
   }),
 );
 
 superAdminRouter.post(
   "/color/enable",
   asyncHandler(async (_req, res) => {
-    res.json(await setColorGameEnabled(true));
+    res.json(serializeColorState(await setColorGameEnabled(true)));
   }),
 );
 
 superAdminRouter.post(
   "/color/disable",
   asyncHandler(async (_req, res) => {
-    res.json(await setColorGameEnabled(false));
+    res.json(serializeColorState(await setColorGameEnabled(false)));
   }),
 );

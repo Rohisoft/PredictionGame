@@ -47,7 +47,12 @@ export async function setColorGameEnabled(enabled: boolean) {
     { isColorGameEnabled: enabled },
     { upsert: true, setDefaultsOnInsert: true },
   );
-  return { enabled };
+  return getColorGameState();
+}
+
+export async function getColorGameState() {
+  const [enabled, currentRound] = await Promise.all([isColorGameEnabled(), getCurrentColorRound()]);
+  return { enabled, currentRound };
 }
 
 // ---------------------------------------------------------------------------
