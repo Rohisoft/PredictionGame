@@ -1,5 +1,6 @@
 
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 type Product = {
   id: number;
@@ -130,7 +131,7 @@ function HomePage() {
           <a href="#shop">Shop</a>
           <a href="#new">New arrivals</a>
           <a href="#offers">Offers</a>
-           <a href="/login">BonusPoints</a>
+           <Link to="/login">BonusPoints</Link>
         </nav>
 
         <div className="header-actions">
