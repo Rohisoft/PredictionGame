@@ -4,7 +4,8 @@ export type TransactionType =
   | "bet"
   | "payout"
   | "refund"
-  | "adjustment";
+  | "adjustment"
+  | "bonus";
 
 export type RoundStatus = "betting" | "locked" | "completed" | "cancelled";
 

@@ -1,4 +1,4 @@
-import { ArrowDownCircle, ArrowUpCircle, Gift, RotateCcw, ShieldPlus } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Gift, RotateCcw, ShieldPlus, Sparkles } from "lucide-react";
 import { useWalletTransactions } from "@/hooks/useWallet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ const TYPE_META: Record<TransactionType, { label: string; icon: typeof ArrowDown
   payout: { label: "Payout", icon: Gift, credit: true },
   refund: { label: "Refund", icon: RotateCcw, credit: true },
   adjustment: { label: "Admin adjustment", icon: ShieldPlus, credit: true },
+  bonus: { label: "Spin & Win bonus", icon: Sparkles, credit: true },
 };
 
 export function TransactionList() {
