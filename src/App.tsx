@@ -9,7 +9,6 @@ import { LoginPage } from "@/pages/LoginPage";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
-import { LandingPage } from "@/pages/LandingPage";
 import { GamePage } from "@/pages/GamePage";
 import { WalletPage } from "@/pages/WalletPage";
 import { ProfilePage } from "@/pages/ProfilePage";
