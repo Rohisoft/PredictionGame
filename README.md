@@ -34,8 +34,9 @@ described above.
 - **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui-style
   components, TanStack Query, Zod + react-hook-form
 - **Backend**: Node.js + Express + Mongoose (MongoDB), custom JWT auth
-- **Hosting**: Netlify (frontend, static) + anywhere that keeps a process
-  alive (backend — Render/Railway/Fly.io/a VPS/etc.; see `server/README.md`)
+- **Hosting**: Render — a Static Site for the frontend, a Docker-based Web
+  Service for the backend (needs a persistent process for the round
+  scheduler), MongoDB Atlas for the database. See "Deployment" below.
 
 ## How the game works
 
@@ -181,22 +182,86 @@ development but isn't part of the repeatable test suite.
 
 ## Deployment
 
-**Frontend (Netlify):**
+Three pieces: MongoDB Atlas (free tier), a Render Web Service for the
+backend (Docker-based, so it just runs `server/Dockerfile` — no separate
+build/start commands to configure), and a Render Static Site for the
+frontend.
 
-1. Push this repo to GitHub/GitLab/Bitbucket and import it in Netlify, or
-   run `netlify deploy` from the CLI.
-2. Netlify reads [`netlify.toml`](netlify.toml) for the build command
-   (`npm run build`), publish directory (`dist`), and the SPA redirect rule
-   that sends all routes to `index.html` for React Router.
-3. In Netlify's Site settings → Environment variables, add `VITE_API_URL`
-   pointing at your deployed API's URL (e.g. `https://api.yourapp.com/api`).
-4. Trigger a deploy.
+### 1. Database — MongoDB Atlas
 
-**Backend:** deploy `server/` anywhere that keeps a Node process running
-(the round scheduler needs that) — see `server/README.md`'s "hosting" note.
-Set `CORS_ORIGIN` on the API to your Netlify URL so cookies are accepted
-cross-site, and make sure `NODE_ENV=production` there so auth cookies get
-`Secure; SameSite=None`.
+Free M0 cluster (it's a real replica set even on the free tier, which
+`placeBet`/`settleRound`'s transactions require). Create a database user,
+and under **Network Access** add `0.0.0.0/0` (Render's outbound IPs aren't
+static). Copy the `mongodb+srv://...` connection string — that's your
+`MONGODB_URI`.
+
+### 2. Backend — Render Web Service (Docker)
+
+- Root directory `server`, environment **Docker** (auto-detected from
+  `server/Dockerfile`) — leave build/start commands blank, Docker mode
+  ignores them.
+- Env vars: `MONGODB_URI`, `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`
+  (`openssl rand -hex 32` each), `JWT_ACCESS_EXPIRES_IN=15m`,
+  `JWT_REFRESH_EXPIRES_IN=30d`, `NODE_ENV=production`, and `PORT=10000`
+  (Render's default port — the app reads `process.env.PORT`, see
+  `server/src/config/env.ts`; the app also binds `0.0.0.0` explicitly,
+  see `server/src/server.ts`, which Docker services require).
+- `CORS_ORIGIN`: see step 4 below — with the same-origin proxy set up
+  there, this mostly matters as a fallback, since the browser will no
+  longer be making genuinely cross-origin requests to this service.
+
+### 3. Frontend — Render Static Site
+
+- Root directory blank, build `npm install && npm run build`, publish
+  directory `dist`.
+- `VITE_API_URL=/api` — **relative**, not the backend's full URL. See why
+  below.
+
+### 4. Redirects/Rewrites — the part that's easy to get wrong
+
+Render's free static sites and web services live on different
+`onrender.com` subdomains. Browsers treat different subdomains of a
+shared public hosting domain like `onrender.com` as separate *sites* —
+so a naive setup (frontend calling the backend's full URL directly) makes
+every API call a cross-site request, and the httpOnly auth cookies it sets
+become cross-site cookies. Mobile Safari (and, increasingly, other mobile
+browsers) blocks those by default — **login appears to silently do
+nothing**: the request succeeds, the cookie never gets stored, and the
+very next request looks logged-out again.
+
+The fix is to not be cross-site at all: proxy `/api/*` through the
+frontend's own origin, so the browser only ever talks to one hostname.
+On the frontend Static Site → **Redirects/Rewrites**, add both of these,
+**in this order** (the API rule must be evaluated before the catch-all,
+or the catch-all swallows every `/api/*` request and serves `index.html`
+instead of proxying it):
+
+| Source | Destination | Action |
+|---|---|---|
+| `/api/*` | `https://<your-backend>.onrender.com/api/*` | Rewrite |
+| `/*` | `/index.html` | Rewrite |
+
+The second rule is also what makes direct navigation/refreshes on any
+non-`/` route (e.g. `/login`) work at all — without it, Render's static
+file server 404s on any path it doesn't have a literal file for, since it
+never gets a chance to hand off to React Router.
+
+With both in place: the browser only ever sees `predictiongame-x.onrender.com`
+(one origin), the proxied response's `Set-Cookie` header lands as a
+first-party cookie, and mobile login/redirect behaves the same as desktop.
+
+### 5. Keep the backend awake
+
+Render's free web services sleep after 15 minutes of no inbound traffic —
+which would stall the in-process round scheduler. A free external pinger
+(cron-job.org or UptimeRobot) hitting the backend's `GET /health` every
+few minutes keeps it alive. See `server/README.md` for details.
+
+### 6. Bootstrap the first superadmin
+
+There's no public sign-up. Run `server/scripts/bootstrap-superadmin.js`
+against your Atlas connection string — see `server/README.md`'s
+"Bootstrapping the first superadmin".
 
 ## Responsible play
 

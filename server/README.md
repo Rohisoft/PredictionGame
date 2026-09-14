@@ -126,6 +126,13 @@ under `USERNAME_PATTERN` — letters/digits/`.`/`_`, 3-30 chars).
   array of token hashes instead of one field.
 - In production, cookies are `Secure; SameSite=None` (required for a
   frontend and API on different domains); locally, `SameSite=Lax` over http.
+  In practice, prefer not needing `SameSite=None` at all: mobile Safari (and
+  increasingly other mobile browsers) blocks cross-site cookies outright
+  regardless of this flag, so if the frontend and API are deployed as two
+  separate subdomains of a shared platform domain (e.g. both on
+  `onrender.com`), proxy the frontend's `/api/*` through to this service —
+  see the root [`README.md`](../README.md)'s "Deployment" section — so the
+  browser only ever sees one origin and the cookie lands first-party.
 
 ## API endpoints
 
@@ -248,10 +255,12 @@ environment; if so, run these tests somewhere with normal internet access.
 
 ## What's intentionally out of scope here (per your answers)
 
-- **Hosting**: not addressed — deploy the Express app anywhere that keeps a
-  process running (Render, Railway, Fly.io, a VPS, etc.); `node-cron` needs
-  a long-lived process, so plain serverless functions won't work for the
-  scheduler without swapping it for an externally-triggered `/tick` route.
+- **Hosting**: see the root [`README.md`](../README.md)'s "Deployment"
+  section for the actual setup used (Render + MongoDB Atlas). In general,
+  this needs a host that keeps a process running (Render, Railway, Fly.io,
+  a VPS, etc.) — `node-cron` needs a long-lived process, so plain
+  serverless functions won't work for the scheduler without swapping it
+  for an externally-triggered `/tick` route.
 - **Real-time updates**: none. The frontend (once wired up) will need to
   poll `GET /rounds/current` / `GET /rounds/:id` on an interval, same as the
   fallback polling already in the existing hooks. Socket.io can be added
