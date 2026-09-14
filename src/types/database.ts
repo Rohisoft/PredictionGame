@@ -75,6 +75,34 @@ export interface Bet {
   settled_at: string | null;
 }
 
+export type ColorRoundStatus = "betting" | "completed" | "cancelled";
+
+export type Color = "red" | "green" | "violet";
+
+export interface ColorRound {
+  id: string;
+  round_number: number;
+  status: ColorRoundStatus;
+  betting_start_time: string;
+  betting_end_time: string;
+  result_time: string;
+  winning_color: Color | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface ColorBet {
+  id: string;
+  user_id: string;
+  round_id: string;
+  selected_color: Color;
+  amount: number;
+  status: BetStatus;
+  payout_amount: number;
+  created_at: string;
+  settled_at: string | null;
+}
+
 /**
  * These types describe the JSON shape returned by the Node/MongoDB API in
  * `server/` — see each Mongoose model's `toJSON` transform (e.g.

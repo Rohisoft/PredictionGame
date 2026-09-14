@@ -12,6 +12,8 @@ const gameSettingsSchema = new Schema({
   isGameRunning: { type: Boolean, required: true, default: true },
   // Superadmin-only switch for the Spin & Win daily bonus wheel.
   isSpinEnabled: { type: Boolean, required: true, default: true },
+  // Superadmin-only switch for the Color Prediction game.
+  isColorGameEnabled: { type: Boolean, required: true, default: true },
 });
 
 gameSettingsSchema.set("toJSON", {
@@ -19,6 +21,7 @@ gameSettingsSchema.set("toJSON", {
     return {
       is_game_running: ret.isGameRunning,
       is_spin_enabled: ret.isSpinEnabled,
+      is_color_game_enabled: ret.isColorGameEnabled,
     };
   },
 });

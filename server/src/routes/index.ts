@@ -7,6 +7,8 @@ import { betsRouter } from "./bets.routes.js";
 import { adminRouter } from "./admin.routes.js";
 import { superAdminRouter } from "./superadmin.routes.js";
 import { spinRouter } from "./spin.routes.js";
+import { colorRoundsRouter } from "./colorRounds.routes.js";
+import { colorBetsRouter } from "./colorBets.routes.js";
 
 export const apiRouter = Router();
 
@@ -22,3 +24,5 @@ apiRouter.use("/bets", betsRouter);
 apiRouter.use("/admin", adminRouter);
 apiRouter.use("/superadmin", superAdminRouter);
 apiRouter.use("/spin", spinRouter);
+apiRouter.use("/color/rounds", colorRoundsRouter);
+apiRouter.use("/color/bets", colorBetsRouter);

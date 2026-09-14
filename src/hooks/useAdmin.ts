@@ -192,3 +192,35 @@ export function useEnableSpin() {
 export function useDisableSpin() {
   return useSetSpinEnabled("disable");
 }
+
+// ---------------------------------------------------------------------------
+// Superadmin-only: Color Prediction on/off switch.
+// ---------------------------------------------------------------------------
+
+export function useSuperAdminColorState() {
+  return useQuery({
+    queryKey: ["superadmin-color-state"],
+    queryFn: () => api.get<{ enabled: boolean }>("/superadmin/color/state"),
+    refetchInterval: 15_000,
+  });
+}
+
+function useSetColorGameEnabled(action: "enable" | "disable") {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.post<{ enabled: boolean }>(`/superadmin/color/${action}`, {}),
+    onSuccess: (state) => {
+      queryClient.setQueryData(["superadmin-color-state"], state);
+      queryClient.invalidateQueries({ queryKey: ["color-game-enabled"] });
+    },
+  });
+}
+
+export function useEnableColorGame() {
+  return useSetColorGameEnabled("enable");
+}
+
+export function useDisableColorGame() {
+  return useSetColorGameEnabled("disable");
+}
