@@ -130,7 +130,7 @@ function HomePage() {
           <a href="#shop">Shop</a>
           <a href="#new">New arrivals</a>
           <a href="#offers">Offers</a>
-           <a href="/bonus-points">BonusPoints</a>
+           <a href="/login">BonusPoints</a>
         </nav>
 
         <div className="header-actions">

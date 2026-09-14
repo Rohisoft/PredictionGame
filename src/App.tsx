@@ -26,7 +26,6 @@ function App() {
           <Toaster position="top-center" richColors closeButton />
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/bonus-points" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
