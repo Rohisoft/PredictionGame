@@ -7,13 +7,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BetPoolCard } from "@/components/game/BetPoolCard";
 import { useAdminRoundState, useStartRound, useStopRound } from "@/hooks/useAdmin";
 import { useRoundBetStats } from "@/hooks/useCurrentRound";
+import { useProfile } from "@/hooks/useProfile";
 import { ApiError } from "@/lib/apiClient";
 
 export function RoundControlCard() {
+  const { data: profile } = useProfile();
+  const isSuperAdmin = profile?.is_super_admin ?? false;
   const { data: state, isLoading } = useAdminRoundState();
   const startRound = useStartRound();
   const stopRound = useStopRound();
-  const { data: betStats, isLoading: betStatsLoading } = useRoundBetStats(state?.current_round?.id ?? null);
+  // The pool stats API is superadmin-only — don't even query it as a plain
+  // admin, since that call would just 403.
+  const { data: betStats, isLoading: betStatsLoading } = useRoundBetStats(
+    isSuperAdmin ? (state?.current_round?.id ?? null) : null,
+  );
 
   async function handleStart() {
     try {
@@ -82,7 +89,7 @@ export function RoundControlCard() {
         </CardContent>
       </Card>
 
-      {round && <BetPoolCard stats={betStats} isLoading={betStatsLoading} />}
+      {round && isSuperAdmin && <BetPoolCard stats={betStats} isLoading={betStatsLoading} />}
     </>
   );
 }

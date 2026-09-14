@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { asyncHandler, HttpError } from "../utils/asyncHandler.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireSuperAdmin } from "../middleware/auth.js";
 import { getCurrentRound, getRecentRounds, getRoundById, isGameRunning } from "../services/gameService.js";
 import { getRoundBetStats } from "../services/betService.js";
 
@@ -46,6 +46,7 @@ roundsRouter.get(
 roundsRouter.get(
   "/:id/stats",
   requireAuth,
+  requireSuperAdmin,
   asyncHandler(async (req, res) => {
     res.json(await getRoundBetStats(req.params.id));
   }),
