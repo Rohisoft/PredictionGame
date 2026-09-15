@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { tickRounds } from "../services/gameService.js";
 import { tickColorRounds } from "../services/colorGameService.js";
+import { tickTeenPattiRounds } from "../services/teenPattiGameService.js";
 
 let running = false;
 
@@ -8,6 +9,7 @@ async function tick() {
   await Promise.all([
     tickRounds().catch((err) => console.error("tickRounds failed:", err)),
     tickColorRounds().catch((err) => console.error("tickColorRounds failed:", err)),
+    tickTeenPattiRounds().catch((err) => console.error("tickTeenPattiRounds failed:", err)),
   ]);
 }
 
@@ -19,7 +21,8 @@ async function tick() {
  *
  * Each tick*Rounds() always settles whatever round is already in flight for
  * its own game, but only opens a new one while that game's own on/off
- * switch is on — see gameService.ts / colorGameService.ts.
+ * switch is on — see gameService.ts / colorGameService.ts /
+ * teenPattiGameService.ts.
  */
 export function startRoundScheduler() {
   const task = cron.schedule("* * * * *", async () => {

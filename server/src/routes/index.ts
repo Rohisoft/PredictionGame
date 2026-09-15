@@ -9,6 +9,8 @@ import { superAdminRouter } from "./superadmin.routes.js";
 import { spinRouter } from "./spin.routes.js";
 import { colorRoundsRouter } from "./colorRounds.routes.js";
 import { colorBetsRouter } from "./colorBets.routes.js";
+import { teenPattiRoundsRouter } from "./teenPattiRounds.routes.js";
+import { teenPattiBetsRouter } from "./teenPattiBets.routes.js";
 
 export const apiRouter = Router();
 
@@ -26,3 +28,5 @@ apiRouter.use("/superadmin", superAdminRouter);
 apiRouter.use("/spin", spinRouter);
 apiRouter.use("/color/rounds", colorRoundsRouter);
 apiRouter.use("/color/bets", colorBetsRouter);
+apiRouter.use("/teenpatti/rounds", teenPattiRoundsRouter);
+apiRouter.use("/teenpatti/bets", teenPattiBetsRouter);

@@ -38,6 +38,12 @@ export const placeColorBetSchema = z.object({
   amount: z.number().refine((v) => STAKE_AMOUNTS.includes(v as (typeof STAKE_AMOUNTS)[number])),
 });
 
+export const placeTeenPattiBetSchema = z.object({
+  roundId: z.string().min(1),
+  selectedHandType: z.enum(["highCard", "pair", "color", "sequence", "pureSequence", "trail"]),
+  amount: z.number().refine((v) => STAKE_AMOUNTS.includes(v as (typeof STAKE_AMOUNTS)[number])),
+});
+
 export const adminAdjustPointsSchema = z.object({
   username: usernameField,
   // Positive to credit, negative to debit — never zero.

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
-import type { ColorRound, GameRound, Profile, WalletTransaction } from "@/types/database";
+import type { ColorRound, GameRound, Profile, TeenPattiRound, WalletTransaction } from "@/types/database";
 
 export type AdminUser = Profile & { balance: number };
 
@@ -228,4 +228,41 @@ export function useEnableColorGame() {
 
 export function useDisableColorGame() {
   return useSetColorGameEnabled("disable");
+}
+
+// ---------------------------------------------------------------------------
+// Superadmin-only: Teen Patti Prediction on/off switch.
+// ---------------------------------------------------------------------------
+
+export interface TeenPattiControlState {
+  enabled: boolean;
+  current_round: TeenPattiRound | null;
+}
+
+export function useSuperAdminTeenPattiState() {
+  return useQuery({
+    queryKey: ["superadmin-teenpatti-state"],
+    queryFn: () => api.get<TeenPattiControlState>("/superadmin/teenpatti/state"),
+    refetchInterval: 5_000,
+  });
+}
+
+function useSetTeenPattiGameEnabled(action: "enable" | "disable") {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.post<TeenPattiControlState>(`/superadmin/teenpatti/${action}`, {}),
+    onSuccess: (state) => {
+      queryClient.setQueryData(["superadmin-teenpatti-state"], state);
+      queryClient.invalidateQueries({ queryKey: ["teenpatti-game-enabled"] });
+    },
+  });
+}
+
+export function useEnableTeenPattiGame() {
+  return useSetTeenPattiGameEnabled("enable");
+}
+
+export function useDisableTeenPattiGame() {
+  return useSetTeenPattiGameEnabled("disable");
 }

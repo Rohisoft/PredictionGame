@@ -8,6 +8,7 @@ import { AdminRow } from "@/components/admin/AdminRow";
 import { CreateAdminForm } from "@/components/admin/CreateAdminForm";
 import { SpinControlCard } from "@/components/admin/SpinControlCard";
 import { ColorControlCard } from "@/components/admin/ColorControlCard";
+import { TeenPattiControlCard } from "@/components/admin/TeenPattiControlCard";
 import { useProfile } from "@/hooks/useProfile";
 import { useSuperAdminAdmins } from "@/hooks/useAdmin";
 import { useWallet } from "@/hooks/useWallet";
@@ -42,6 +43,8 @@ export function SuperAdminPage() {
       <SpinControlCard />
 
       <ColorControlCard />
+
+      <TeenPattiControlCard />
 
       <Card>
         <CardHeader>

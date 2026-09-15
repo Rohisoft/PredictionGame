@@ -4,6 +4,7 @@ import { requireAuth, requireSuperAdmin } from "../middleware/auth.js";
 import { superAdminAdjustAdminPoints, superAdminCreateAdmin, superAdminListAdmins } from "../services/adminService.js";
 import { isSpinEnabled, setSpinEnabled } from "../services/spinService.js";
 import { getColorGameState, setColorGameEnabled } from "../services/colorGameService.js";
+import { getTeenPattiGameState, setTeenPattiEnabled } from "../services/teenPattiGameService.js";
 import { adminAdjustPointsSchema, adminCreateUserSchema, adminListUsersSchema } from "../validation.js";
 
 export const superAdminRouter = Router();
@@ -88,5 +89,34 @@ superAdminRouter.post(
   "/color/disable",
   asyncHandler(async (_req, res) => {
     res.json(serializeColorState(await setColorGameEnabled(false)));
+  }),
+);
+
+// -----------------------------------------------------------------------
+// Teen Patti Prediction on/off switch — superadmin only.
+// -----------------------------------------------------------------------
+
+function serializeTeenPattiState(state: { enabled: boolean; currentRound: unknown }) {
+  return { enabled: state.enabled, current_round: state.currentRound };
+}
+
+superAdminRouter.get(
+  "/teenpatti/state",
+  asyncHandler(async (_req, res) => {
+    res.json(serializeTeenPattiState(await getTeenPattiGameState()));
+  }),
+);
+
+superAdminRouter.post(
+  "/teenpatti/enable",
+  asyncHandler(async (_req, res) => {
+    res.json(serializeTeenPattiState(await setTeenPattiEnabled(true)));
+  }),
+);
+
+superAdminRouter.post(
+  "/teenpatti/disable",
+  asyncHandler(async (_req, res) => {
+    res.json(serializeTeenPattiState(await setTeenPattiEnabled(false)));
   }),
 );

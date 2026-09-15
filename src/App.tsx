@@ -11,6 +11,7 @@ import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 import { GamePage } from "@/pages/GamePage";
 import { ColorGamePage } from "@/pages/ColorGamePage";
+import { TeenPattiPage } from "@/pages/TeenPattiPage";
 import { SpinPage } from "@/pages/SpinPage";
 import { WalletPage } from "@/pages/WalletPage";
 import { ProfilePage } from "@/pages/ProfilePage";
@@ -55,6 +56,16 @@ function App() {
                 <ProtectedRoute>
                   <AppShell>
                     <ColorGamePage />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teenpatti"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <TeenPattiPage />
                   </AppShell>
                 </ProtectedRoute>
               }

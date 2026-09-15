@@ -103,6 +103,40 @@ export interface ColorBet {
   settled_at: string | null;
 }
 
+export type TeenPattiRoundStatus = "betting" | "completed" | "cancelled";
+
+export type HandType = "highCard" | "pair" | "color" | "sequence" | "pureSequence" | "trail";
+
+export interface PlayingCard {
+  rank: string;
+  suit: "♠" | "♥" | "♦" | "♣";
+}
+
+export interface TeenPattiRound {
+  id: string;
+  round_number: number;
+  status: TeenPattiRoundStatus;
+  betting_start_time: string;
+  betting_end_time: string;
+  result_time: string;
+  cards: PlayingCard[];
+  winning_hand_type: HandType | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface TeenPattiBet {
+  id: string;
+  user_id: string;
+  round_id: string;
+  selected_hand_type: HandType;
+  amount: number;
+  status: BetStatus;
+  payout_amount: number;
+  created_at: string;
+  settled_at: string | null;
+}
+
 /**
  * These types describe the JSON shape returned by the Node/MongoDB API in
  * `server/` — see each Mongoose model's `toJSON` transform (e.g.
