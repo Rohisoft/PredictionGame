@@ -55,9 +55,29 @@ export default {
           "0%": { opacity: "0", transform: "translateY(4px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "deal-in": {
+          "0%": { opacity: "0", transform: "scale(0.85) translateY(-6px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(250, 204, 21, 0)" },
+          "50%": { boxShadow: "0 0 18px 4px rgba(250, 204, 21, 0.5)" },
+        },
+        "dealer-pulse": {
+          "0%, 100%": { transform: "scale(1)", opacity: "1" },
+          "50%": { transform: "scale(1.06)", opacity: "0.85" },
+        },
+        "timer-warning": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.45" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.25s ease-out",
+        "deal-in": "deal-in 0.35s ease-out",
+        "glow-pulse": "glow-pulse 1.6s ease-in-out infinite",
+        "dealer-pulse": "dealer-pulse 1.4s ease-in-out infinite",
+        "timer-warning": "timer-warning 0.8s ease-in-out infinite",
       },
     },
   },

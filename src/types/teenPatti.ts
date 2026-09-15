@@ -17,5 +17,5 @@ export const HAND_TYPE_ORDER: HandType[] = ["trail", "pureSequence", "sequence",
 
 export const PLAYER_INFO: Record<TeenPattiPlayer, { label: string; sublabel: string }> = {
   playerA: { label: "Player A", sublabel: "You" },
-  playerB: { label: "Player B", sublabel: "Computer" },
+  playerB: { label: "Player B", sublabel: "Opponent Hand" },
 };

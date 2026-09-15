@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { PauseCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoundTimer } from "@/components/game/RoundTimer";
 import { PlaceBetPanel } from "@/components/game/PlaceBetPanel";
 import { DiceResult } from "@/components/game/DiceResult";
+import { DiceResultBoard } from "@/components/game/DiceResultBoard";
 import { RecentResults } from "@/components/game/RecentResults";
 import { RulesPanel } from "@/components/game/RulesPanel";
 import { BalanceCard } from "@/components/wallet/BalanceCard";
@@ -21,6 +21,15 @@ import { cn } from "@/lib/utils";
 const REVEAL_HOLD_MS = 4_000;
 /** Safety net in case a cron tick never settles a round (shouldn't happen). */
 const STUCK_ROUND_MS = 20_000;
+
+/**
+ * Dark casino backdrop for the whole page — every section has its own dark
+ * panel, but without this the light app background would show through the
+ * gaps between them. Matches the same treatment on Color Prediction and
+ * Teen Patti for a consistent look across all three games.
+ */
+const PAGE_SHELL_CLASS =
+  "mx-auto max-w-2xl space-y-4 rounded-3xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-3 shadow-2xl sm:p-5";
 
 export function GamePage() {
   const { getServerNow, synced } = useServerTimeOffset();
@@ -81,9 +90,9 @@ export function GamePage() {
 
   if (!synced || !round) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className={PAGE_SHELL_CLASS}>
+        <Skeleton className="h-40 w-full bg-white/10" />
+        <Skeleton className="h-64 w-full bg-white/10" />
       </div>
     );
   }
@@ -100,121 +109,76 @@ export function GamePage() {
   const isGamePaused = gameRunning?.is_game_running === false;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className={PAGE_SHELL_CLASS}>
       <BalanceCard />
 
       {isGamePaused && (
-        <Card className="border-dashed">
-          <CardContent className="flex items-center gap-3 py-4 text-sm text-muted-foreground">
+        <Card className="border-dashed border-white/15 bg-white/5">
+          <CardContent className="flex items-center gap-3 py-4 text-sm text-white/60">
             <PauseCircle className="h-5 w-5 shrink-0" />
             Predictions are paused right now — an admin will resume the game shortly.
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <div className="overflow-hidden rounded-2xl border border-indigo-900/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-xl">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6">
           <div>
-            <CardTitle>Round #{round.round_number}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isBetting
-                ? "Submit your prediction before the window closes"
-                : isCompleted
-                  ? "Round complete"
-                  : isCancelled
-                    ? "Round cancelled by admin"
-                    : "Predictions closed — revealing result"}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-400">Round ID</p>
+            <p className="text-lg font-bold text-white">#{round.round_number}</p>
           </div>
-          <Badge variant={isBetting ? "success" : isCancelled ? "outline" : "destructive"}>
-            {isBetting ? "Predictions open" : isCancelled ? "Cancelled" : "Result phase"}
-          </Badge>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
+          <span
+            className={cn(
+              "whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold",
+              isCancelled
+                ? "bg-white/10 text-white/50"
+                : isCompleted
+                  ? "bg-amber-400/15 text-amber-300"
+                  : isBetting
+                    ? "bg-emerald-400/15 text-emerald-400"
+                    : "bg-rose-400/15 text-rose-400",
+            )}
+          >
+            {isCancelled ? "Cancelled" : isCompleted ? "Round Complete" : isBetting ? "Predictions Open" : "Rolling…"}
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center gap-4 px-3 pb-5 sm:px-6">
           {isCancelled ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              This round was stopped before it finished. Every prediction on it was refunded in
-              full.
+            <p className="py-6 text-center text-sm text-white/50">
+              This round was stopped before it finished. Every prediction on it was refunded in full.
             </p>
           ) : (
             <>
-              {isBetting ? (
+              {!isCompleted && (
                 <RoundTimer
-                  targetMs={bettingEndMs}
-                  totalSeconds={50}
+                  targetMs={isBetting ? bettingEndMs : resultEndMs}
+                  totalSeconds={isBetting ? 50 : 10}
                   getServerNow={getServerNow}
-                  label="Predictions close in"
-                  tone="primary"
-                />
-              ) : (
-                <RoundTimer
-                  targetMs={resultEndMs}
-                  totalSeconds={10}
-                  getServerNow={getServerNow}
-                  label="Next round in"
-                  tone="destructive"
+                  bettingOpen={isBetting}
                 />
               )}
-              <DiceResult
-                diceResult={round.dice_result}
-                winningSide={round.winning_side}
-                rolling={isRevealing}
-              />
+              <DiceResult diceResult={round.dice_result} winningSide={round.winning_side} rolling={isRevealing} />
             </>
           )}
-        </CardContent>
-        {isCompleted && (
-          <CardContent className="pt-0">
-            <div
-              className={cn(
-                "flex flex-col items-center gap-1 rounded-lg border p-3 text-center",
-                myBet?.status === "won"
-                  ? "border-success/40 bg-success/10"
-                  : myBet?.status === "lost"
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-border bg-secondary/50",
-              )}
-            >
-              <p className="text-sm font-semibold">
-                {round.winning_side === "odd" ? "Odd" : "Even"} wins with a {round.dice_result}
-              </p>
-              {myBet?.status === "won" && (
-                <p className="text-sm font-medium text-success">
-                  You won {myBet.payout_amount} points! 🎉
-                </p>
-              )}
-              {myBet?.status === "lost" && (
-                <p className="text-sm font-medium text-destructive">
-                  You lost {myBet.amount} points.
-                </p>
-              )}
-              {!myBet && (
-                <p className="text-xs text-muted-foreground">
-                  You didn't make a prediction this round.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        )}
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your prediction</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PlaceBetPanel roundId={round.id} disabled={!isBetting} existingBet={myBet} />
-        </CardContent>
-      </Card>
+      {isCompleted && round.dice_result && round.winning_side && (
+        <DiceResultBoard
+          roundNumber={round.round_number}
+          diceResult={round.dice_result}
+          winningSide={round.winning_side}
+          myBet={myBet}
+        />
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent results</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RecentResults />
-        </CardContent>
-      </Card>
+      <PlaceBetPanel roundId={round.id} disabled={!isBetting} existingBet={myBet} />
+
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 p-4 shadow-lg sm:p-5">
+        <p className="mb-2 text-sm font-semibold text-white/70">Recent Results</p>
+        <RecentResults />
+      </div>
 
       <RulesPanel />
     </div>

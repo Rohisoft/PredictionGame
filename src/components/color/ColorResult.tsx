@@ -49,7 +49,7 @@ export function ColorResult({ winningColor, rolling }: ColorResultProps) {
           rolling ? "scale-90 animate-pulse" : "scale-100",
         )}
       />
-      <span className="h-5 text-center text-xs font-medium text-muted-foreground">{caption}</span>
+      <span className="h-5 text-center text-xs font-medium text-white/60">{caption}</span>
     </div>
   );
 }

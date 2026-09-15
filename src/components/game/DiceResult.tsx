@@ -151,7 +151,7 @@ export function DiceResult({ diceResult, winningSide, rolling }: DiceResultProps
           )}
         />
       </div>
-      <span className="h-5 text-center text-xs font-medium text-muted-foreground">{caption}</span>
+      <span className="h-5 text-center text-xs font-medium text-white/60">{caption}</span>
     </div>
   );
 }

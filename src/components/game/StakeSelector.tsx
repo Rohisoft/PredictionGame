@@ -17,10 +17,10 @@ export function StakeSelector({ value, onChange, disabled }: StakeSelectorProps)
           disabled={disabled}
           onClick={() => onChange(amount)}
           className={cn(
-            "rounded-lg border-2 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50",
+            "rounded-lg border-2 py-2.5 text-sm font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40",
             value === amount
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card hover:border-primary/40",
+              ? "border-amber-400 bg-amber-400 text-slate-950"
+              : "border-white/10 bg-white/5 text-white hover:border-white/25",
           )}
         >
           {amount} pts

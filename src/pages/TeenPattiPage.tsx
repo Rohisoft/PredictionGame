@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { PauseCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RoundTimer } from "@/components/game/RoundTimer";
 import { PlaceTeenPattiBetPanel } from "@/components/teenpatti/PlaceTeenPattiBetPanel";
 import { CardsReveal } from "@/components/teenpatti/CardsReveal";
+import { RoundTimer } from "@/components/game/RoundTimer";
+import { TeenPattiResultBoard } from "@/components/teenpatti/TeenPattiResultBoard";
 import { RecentTeenPattiResults } from "@/components/teenpatti/RecentTeenPattiResults";
 import { TeenPattiRulesPanel } from "@/components/teenpatti/TeenPattiRulesPanel";
 import { BalanceCard } from "@/components/wallet/BalanceCard";
@@ -19,13 +19,21 @@ import { useServerTimeOffset } from "@/lib/serverTime";
 import { useServerTick } from "@/hooks/useServerTick";
 import { useTeenPattiBetSettlementToasts } from "@/hooks/useTeenPattiBetSettlementToasts";
 import { getRoundPhase } from "@/types/game";
-import { PLAYER_INFO } from "@/types/teenPatti";
 import { cn } from "@/lib/utils";
 
 /** How long to keep showing a completed round's result before moving on. */
 const REVEAL_HOLD_MS = 4_000;
 /** Safety net in case a cron tick never settles a round (shouldn't happen). */
 const STUCK_ROUND_MS = 20_000;
+
+/**
+ * Dark casino backdrop for the whole page — every section already has its
+ * own dark panel, but without this the light app background showed through
+ * the gaps between them. Applied to every render branch (loading, disabled,
+ * and the live game) so the theme is consistent no matter the state.
+ */
+const PAGE_SHELL_CLASS =
+  "mx-auto max-w-2xl space-y-4 rounded-3xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-3 shadow-2xl sm:p-5";
 
 export function TeenPattiPage() {
   const { getServerNow, synced } = useServerTimeOffset();
@@ -72,19 +80,19 @@ export function TeenPattiPage() {
 
   if (!synced || (!round && !isDisabled)) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className={PAGE_SHELL_CLASS}>
+        <Skeleton className="h-40 w-full bg-white/10" />
+        <Skeleton className="h-64 w-full bg-white/10" />
       </div>
     );
   }
 
   if (isDisabled && !round) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
+      <div className={PAGE_SHELL_CLASS}>
         <BalanceCard />
-        <Card className="border-dashed">
-          <CardContent className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
+        <Card className="border-dashed border-white/15 bg-white/5">
+          <CardContent className="flex items-center gap-3 py-6 text-sm text-white/60">
             <PauseCircle className="h-5 w-5 shrink-0" />
             Teen Patti Prediction is currently unavailable — check back later.
           </CardContent>
@@ -96,9 +104,9 @@ export function TeenPattiPage() {
 
   if (!round) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className={PAGE_SHELL_CLASS}>
+        <Skeleton className="h-40 w-full bg-white/10" />
+        <Skeleton className="h-64 w-full bg-white/10" />
       </div>
     );
   }
@@ -112,62 +120,57 @@ export function TeenPattiPage() {
   const isRevealing = !isCancelled && !isCompleted && !isBetting;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className={PAGE_SHELL_CLASS}>
       <BalanceCard />
 
       {isDisabled && (
-        <Card className="border-dashed">
-          <CardContent className="flex items-center gap-3 py-4 text-sm text-muted-foreground">
+        <Card className="border-dashed border-white/15 bg-white/5">
+          <CardContent className="flex items-center gap-3 py-4 text-sm text-white/60">
             <PauseCircle className="h-5 w-5 shrink-0" />
             Teen Patti Prediction is currently unavailable — an admin will resume it shortly.
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <div className="overflow-hidden rounded-2xl border border-indigo-900/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-xl">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6">
           <div>
-            <CardTitle>Round #{round.round_number}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isBetting
-                ? "Submit your prediction before the window closes"
-                : isCompleted
-                  ? "Round complete"
-                  : isCancelled
-                    ? "Round cancelled by admin"
-                    : "Predictions closed — dealing cards"}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-400">Round ID</p>
+            <p className="text-lg font-bold text-white">#{round.round_number}</p>
           </div>
-          <Badge variant={isBetting ? "success" : isCancelled ? "outline" : "destructive"}>
-            {isBetting ? "Predictions open" : isCancelled ? "Cancelled" : "Result phase"}
-          </Badge>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-4">
+          <span
+            className={cn(
+              "whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold",
+              isCancelled
+                ? "bg-white/10 text-white/50"
+                : isCompleted
+                  ? "bg-amber-400/15 text-amber-300"
+                  : isBetting
+                    ? "bg-emerald-400/15 text-emerald-400"
+                    : "bg-rose-400/15 text-rose-400",
+            )}
+          >
+            {isCancelled ? "Cancelled" : isCompleted ? "Round Complete" : isBetting ? "Predictions Open" : "Dealing…"}
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center gap-4 px-3 pb-5 sm:px-6">
           {isCancelled ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              This round was stopped before it finished. Every prediction on it was refunded in
-              full.
+            <p className="py-6 text-center text-sm text-white/50">
+              This round was stopped before it finished. Every prediction on it was refunded in full.
             </p>
           ) : (
             <>
-              {isBetting ? (
+              {!isCompleted && (
                 <RoundTimer
-                  targetMs={bettingEndMs}
-                  totalSeconds={50}
+                  targetMs={isBetting ? bettingEndMs : resultEndMs}
+                  totalSeconds={isBetting ? 50 : 10}
                   getServerNow={getServerNow}
-                  label="Predictions close in"
-                  tone="primary"
-                />
-              ) : (
-                <RoundTimer
-                  targetMs={resultEndMs}
-                  totalSeconds={10}
-                  getServerNow={getServerNow}
-                  label="Next round in"
-                  tone="destructive"
+                  bettingOpen={isBetting}
                 />
               )}
               <CardsReveal
+                key={round.id}
                 playerACards={round.player_a_cards}
                 playerBCards={round.player_b_cards}
                 playerAHandType={round.player_a_hand_type}
@@ -177,61 +180,27 @@ export function TeenPattiPage() {
               />
             </>
           )}
-        </CardContent>
-        {isCompleted && (
-          <CardContent className="pt-0">
-            <div
-              className={cn(
-                "flex flex-col items-center gap-1 rounded-lg border p-3 text-center",
-                myBet?.status === "won"
-                  ? "border-success/40 bg-success/10"
-                  : myBet?.status === "lost"
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-border bg-secondary/50",
-              )}
-            >
-              {myBet?.status === "won" && (
-                <p className="text-sm font-medium text-success">
-                  {PLAYER_INFO[myBet.selected_player].label} won — you won {myBet.payout_amount} points! 🎉
-                </p>
-              )}
-              {myBet?.status === "lost" && (
-                <p className="text-sm font-medium text-destructive">
-                  You lost {myBet.amount} points.
-                </p>
-              )}
-              {myBet?.status === "refunded" && (
-                <p className="text-sm font-medium text-muted-foreground">
-                  It was a tie — your {myBet.amount} points were refunded.
-                </p>
-              )}
-              {!myBet && (
-                <p className="text-xs text-muted-foreground">
-                  You didn't make a prediction this round.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        )}
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your prediction</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PlaceTeenPattiBetPanel roundId={round.id} disabled={!isBetting} existingBet={myBet} />
-        </CardContent>
-      </Card>
+      {isCompleted && round.winner && (
+        <TeenPattiResultBoard
+          roundNumber={round.round_number}
+          playerACards={round.player_a_cards}
+          playerBCards={round.player_b_cards}
+          playerAHandType={round.player_a_hand_type}
+          playerBHandType={round.player_b_hand_type}
+          winner={round.winner}
+          myBet={myBet}
+        />
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent results</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RecentTeenPattiResults />
-        </CardContent>
-      </Card>
+      <PlaceTeenPattiBetPanel roundId={round.id} disabled={!isBetting} existingBet={myBet} />
+
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 p-4 shadow-lg sm:p-5">
+        <p className="mb-2 text-sm font-semibold text-white/70">Recent Results</p>
+        <RecentTeenPattiResults />
+      </div>
 
       <TeenPattiRulesPanel />
     </div>
