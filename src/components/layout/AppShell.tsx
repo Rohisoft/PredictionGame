@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Crown, Dices, Gift, History, LogOut, Palette, ShieldCheck, Spade, User, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -16,11 +16,31 @@ const navItems = [
   { to: "/profile", label: "Profile", icon: User },
 ];
 
+/** The proper display name of whichever page is active, shown in the header. */
+const PAGE_TITLE: Record<string, string> = {
+  "/play": "Odd/Even",
+  "/color": "Color Prediction",
+  "/teenpatti": "Teen Patti",
+  "/spin": "Spin & Win",
+  "/wallet": "Wallet",
+  "/history": "History",
+  "/profile": "Profile",
+  "/admin": "Admin",
+  "/superadmin": "Super Admin",
+};
+
+const NAV_LINK_CLASS =
+  "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-white/50 transition-colors hover:bg-white/10 hover:text-white";
+const NAV_LINK_ACTIVE_CLASS = "bg-amber-400/10 text-amber-300";
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { signOut } = useAuth();
   const { data: profile } = useProfile();
   const { data: wallet } = useWallet();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const pageTitle = PAGE_TITLE[location.pathname] ?? "Odd/Even";
 
   async function handleLogout() {
     await signOut();
@@ -29,11 +49,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-border bg-card/80 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 backdrop-blur">
         <div className="container flex h-16 items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-bold text-lg">
-            <Dices className="h-6 w-6 text-primary" />
-            <span>Odd/Even</span>
+          <div className="flex items-center gap-2 text-lg font-bold text-white">
+            <Dices className="h-6 w-6 text-amber-400" />
+            <span>{pageTitle}</span>
           </div>
 
           <nav className="hidden items-center gap-1 sm:flex">
@@ -41,12 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                    isActive && "bg-secondary text-foreground",
-                  )
-                }
+                className={({ isActive }) => cn(NAV_LINK_CLASS, isActive && NAV_LINK_ACTIVE_CLASS)}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
@@ -55,12 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {profile?.is_admin && (
               <NavLink
                 to="/admin"
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                    isActive && "bg-secondary text-foreground",
-                  )
-                }
+                className={({ isActive }) => cn(NAV_LINK_CLASS, isActive && NAV_LINK_ACTIVE_CLASS)}
               >
                 <ShieldCheck className="h-4 w-4" />
                 Admin
@@ -69,12 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {profile?.is_super_admin && (
               <NavLink
                 to="/superadmin"
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                    isActive && "bg-secondary text-foreground",
-                  )
-                }
+                className={({ isActive }) => cn(NAV_LINK_CLASS, isActive && NAV_LINK_ACTIVE_CLASS)}
               >
                 <Crown className="h-4 w-4" />
                 Super Admin
@@ -83,7 +88,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2">
-            <div className="hidden rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground sm:block">
+            <div className="hidden rounded-full bg-amber-400/15 px-3 py-1.5 text-sm font-semibold text-amber-300 sm:block">
               {wallet ? `${formatPoints(wallet.balance)} pts` : "…"}
             </div>
             {profile?.is_admin && (
@@ -91,8 +96,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 to="/admin"
                 className={({ isActive }) =>
                   cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground sm:hidden",
-                    isActive && "bg-secondary text-foreground",
+                    "flex h-9 w-9 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white sm:hidden",
+                    isActive && "bg-amber-400/10 text-amber-300",
                   )
                 }
                 aria-label="Admin"
@@ -105,8 +110,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 to="/superadmin"
                 className={({ isActive }) =>
                   cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground sm:hidden",
-                    isActive && "bg-secondary text-foreground",
+                    "flex h-9 w-9 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white sm:hidden",
+                    isActive && "bg-amber-400/10 text-amber-300",
                   )
                 }
                 aria-label="Super Admin"
@@ -116,7 +121,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
             <button
               onClick={handleLogout}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white"
               aria-label="Log out"
             >
               <LogOut className="h-4 w-4" />
@@ -127,15 +132,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="container flex-1 py-6">{children}</main>
 
-      <nav className="sticky bottom-0 z-20 flex border-t border-border bg-card/95 backdrop-blur sm:hidden">
+      <nav className="sticky bottom-0 z-20 flex border-t border-white/10 bg-slate-950/95 backdrop-blur sm:hidden">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium text-muted-foreground",
-                isActive && "text-primary",
+                "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium text-white/50",
+                isActive && "text-amber-400",
               )
             }
           >
@@ -145,9 +150,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         ))}
       </nav>
 
-      <footer className="hidden border-t border-border py-4 text-center text-xs text-muted-foreground sm:block">
-        Odd/Even is a game of chance played with virtual points — not real money. Play
-        responsibly. 18+ only.
+      <footer className="hidden border-t border-white/10 py-4 text-center text-xs text-white/40 sm:block">
+        Odd/Even is a game of chance played with virtual points — not real money. Play responsibly. 18+ only.
       </footer>
     </div>
   );

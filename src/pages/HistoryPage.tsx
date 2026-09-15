@@ -72,11 +72,14 @@ export function HistoryPage() {
         statusLabel: bet.status,
         statusTone: STATUS_TONE[bet.status],
         roundLabel: bet.teen_patti_rounds ? `Round #${bet.teen_patti_rounds.round_number}` : "—",
-        pick: PLAYER_INFO[bet.selected_player].label,
+        // Older bets placed before the Player A/B redesign don't carry
+        // `selected_player` (they used the previous hand-type format) — fall
+        // back instead of crashing the whole history list on one legacy row.
+        pick: bet.selected_player ? PLAYER_INFO[bet.selected_player].label : "—",
         result: bet.teen_patti_rounds?.winner
           ? bet.teen_patti_rounds.winner === "tie"
             ? "Tie"
-            : PLAYER_INFO[bet.teen_patti_rounds.winner].label
+            : (PLAYER_INFO[bet.teen_patti_rounds.winner]?.label ?? "—")
           : "—",
         amount: bet.amount,
         payoutAmount: bet.payout_amount,
