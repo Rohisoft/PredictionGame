@@ -19,7 +19,7 @@ import { useServerTimeOffset } from "@/lib/serverTime";
 import { useServerTick } from "@/hooks/useServerTick";
 import { useTeenPattiBetSettlementToasts } from "@/hooks/useTeenPattiBetSettlementToasts";
 import { getRoundPhase } from "@/types/game";
-import { HAND_TYPE_INFO } from "@/types/teenPatti";
+import { PLAYER_INFO } from "@/types/teenPatti";
 import { cn } from "@/lib/utils";
 
 /** How long to keep showing a completed round's result before moving on. */
@@ -142,7 +142,7 @@ export function TeenPattiPage() {
             {isBetting ? "Predictions open" : isCancelled ? "Cancelled" : "Result phase"}
           </Badge>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
+        <CardContent className="flex flex-col items-center gap-4">
           {isCancelled ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               This round was stopped before it finished. Every prediction on it was refunded in
@@ -167,7 +167,14 @@ export function TeenPattiPage() {
                   tone="destructive"
                 />
               )}
-              <CardsReveal cards={round.cards} winningHandType={round.winning_hand_type} rolling={isRevealing} />
+              <CardsReveal
+                playerACards={round.player_a_cards}
+                playerBCards={round.player_b_cards}
+                playerAHandType={round.player_a_hand_type}
+                playerBHandType={round.player_b_hand_type}
+                winner={round.winner}
+                rolling={isRevealing}
+              />
             </>
           )}
         </CardContent>
@@ -183,17 +190,19 @@ export function TeenPattiPage() {
                     : "border-border bg-secondary/50",
               )}
             >
-              <p className="text-sm font-semibold">
-                {round.winning_hand_type && HAND_TYPE_INFO[round.winning_hand_type].label} wins
-              </p>
               {myBet?.status === "won" && (
                 <p className="text-sm font-medium text-success">
-                  You won {myBet.payout_amount} points! 🎉
+                  {PLAYER_INFO[myBet.selected_player].label} won — you won {myBet.payout_amount} points! 🎉
                 </p>
               )}
               {myBet?.status === "lost" && (
                 <p className="text-sm font-medium text-destructive">
                   You lost {myBet.amount} points.
+                </p>
+              )}
+              {myBet?.status === "refunded" && (
+                <p className="text-sm font-medium text-muted-foreground">
+                  It was a tie — your {myBet.amount} points were refunded.
                 </p>
               )}
               {!myBet && (

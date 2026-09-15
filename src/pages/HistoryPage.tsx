@@ -6,7 +6,7 @@ import { useMyBetHistory } from "@/hooks/useMyBets";
 import { useMyColorBetHistory } from "@/hooks/useMyColorBets";
 import { useMyTeenPattiBetHistory } from "@/hooks/useMyTeenPattiBets";
 import { useWalletTransactions } from "@/hooks/useWallet";
-import { HAND_TYPE_INFO } from "@/types/teenPatti";
+import { PLAYER_INFO } from "@/types/teenPatti";
 import { GAME_KIND_INFO, GAME_KIND_ORDER, type GameKind, type HistoryEntry, type HistoryStatusTone } from "@/types/history";
 import { formatDateTime, formatPoints, cn } from "@/lib/utils";
 import type { BetStatus } from "@/types/database";
@@ -72,9 +72,11 @@ export function HistoryPage() {
         statusLabel: bet.status,
         statusTone: STATUS_TONE[bet.status],
         roundLabel: bet.teen_patti_rounds ? `Round #${bet.teen_patti_rounds.round_number}` : "—",
-        pick: HAND_TYPE_INFO[bet.selected_hand_type].label,
-        result: bet.teen_patti_rounds?.winning_hand_type
-          ? HAND_TYPE_INFO[bet.teen_patti_rounds.winning_hand_type].label
+        pick: PLAYER_INFO[bet.selected_player].label,
+        result: bet.teen_patti_rounds?.winner
+          ? bet.teen_patti_rounds.winner === "tie"
+            ? "Tie"
+            : PLAYER_INFO[bet.teen_patti_rounds.winner].label
           : "—",
         amount: bet.amount,
         payoutAmount: bet.payout_amount,

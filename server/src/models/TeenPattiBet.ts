@@ -1,15 +1,17 @@
 import { Schema, model, Types } from "mongoose";
-import { HAND_TYPES } from "../utils/teenPattiEvaluator.js";
 import { idOf, isPopulated } from "../utils/serialize.js";
 
 export const TEEN_PATTI_BET_STATUSES = ["pending", "won", "lost", "refunded"] as const;
 export type TeenPattiBetStatus = (typeof TEEN_PATTI_BET_STATUSES)[number];
 
+export const TEEN_PATTI_PLAYERS = ["playerA", "playerB"] as const;
+export type TeenPattiPlayer = (typeof TEEN_PATTI_PLAYERS)[number];
+
 const teenPattiBetSchema = new Schema(
   {
     userId: { type: Types.ObjectId, ref: "User", required: true, index: true },
     roundId: { type: Types.ObjectId, ref: "TeenPattiRound", required: true, index: true },
-    selectedHandType: { type: String, enum: HAND_TYPES, required: true },
+    selectedPlayer: { type: String, enum: TEEN_PATTI_PLAYERS, required: true },
     amount: { type: Number, required: true, min: 0.01 },
     status: { type: String, enum: TEEN_PATTI_BET_STATUSES, required: true, default: "pending", index: true },
     payoutAmount: { type: Number, required: true, default: 0, min: 0 },
@@ -28,7 +30,7 @@ teenPattiBetSchema.set("toJSON", {
       id: ret._id.toString(),
       user_id: idOf(ret.userId),
       round_id: idOf(ret.roundId),
-      selected_hand_type: ret.selectedHandType,
+      selected_player: ret.selectedPlayer,
       amount: ret.amount,
       status: ret.status,
       payout_amount: ret.payoutAmount,

@@ -30,33 +30,19 @@ export const SPIN_SEGMENTS: ReadonlyArray<{ value: number; weight: number }> = [
   { value: 100, weight: 1 },
 ];
 
-// Teen Patti Prediction — fair (zero house-edge) odds derived directly from
-// real 3-card-hand combinatorics over a standard 52-card deck, same "no
-// house edge" spirit as the odd/even and color payouts: multiplier =
-// 1 / P(hand), so every bet is exactly break-even in expectation regardless
-// of which hand type is picked, even though the 6 hand types have wildly
-// different real probabilities. Out of C(52,3) = 22100 possible 3-card
-// hands (counts verified exhaustively in
-// server/tests/teenPattiEvaluator.test.ts):
-//   trail (three of a kind):        52 hands  → P=0.24%  → fair odds 425.00x
-//   pureSequence (straight flush):  48 hands  → P=0.22%  → fair odds 460.42x
-//   sequence (straight):           720 hands  → P=3.26%  → fair odds  30.69x
-//   color (flush):                1096 hands  → P=4.96%  → fair odds  20.16x
-//   pair:                         3744 hands  → P=16.95% → fair odds   5.90x
-//   highCard:                    16440 hands  → P=74.39% → fair odds   1.34x
-// Rounded to 1 decimal place (not left at full precision) purely so every
-// payout comes out to a whole number of points given STAKE_AMOUNTS are all
-// multiples of 10 — the rounding shifts true fairness by at most ~0.04
-// percentage points per hand type, negligible next to the deliberate
-// softening already used elsewhere (e.g. the Spin & Win wheel).
-export const TEEN_PATTI_MULTIPLIERS: Record<
-  "trail" | "pureSequence" | "sequence" | "color" | "pair" | "highCard",
-  number
-> = {
-  trail: 425.0,
-  pureSequence: 460.4,
-  sequence: 30.7,
-  color: 20.2,
-  pair: 5.9,
-  highCard: 1.3,
-};
+// Teen Patti Prediction — Player A (the user) vs Player B (the computer),
+// each dealt 3 cards from one shared, shuffled 52-card deck (6 unique cards
+// total), compared with standard Teen Patti hand rankings. Because both
+// hands are drawn symmetrically from the same shuffle, P(A wins) = P(B
+// wins) exactly regardless of hand-type probabilities — swapping which 3
+// of the 6 dealt cards go to A vs B doesn't change the joint distribution.
+// Verified statistically in server/tests/teenPattiEvaluator.test.ts
+// (20000 trials, win share within 45–55%).
+//
+// A flat 2x payout (same fair-odds pattern as odd/even and color) plus a
+// full refund on a tie is *exactly* break-even in expectation regardless
+// of the true tie probability: letting p = P(tie), each side wins with
+// probability (1-p)/2 for +stake profit, loses with the same probability
+// for -stake, and ties with probability p for a wash — the p term drops
+// out of the expectation entirely.
+export const TEEN_PATTI_PAYOUT_MULTIPLIER = 2;

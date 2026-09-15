@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
-import type { HandType, TeenPattiBet } from "@/types/database";
+import type { TeenPattiBet, TeenPattiPlayer } from "@/types/database";
 import { useAuth } from "@/hooks/useAuth";
 
 interface PlaceTeenPattiBetParams {
   roundId: string;
-  selectedHandType: HandType;
+  selectedPlayer: TeenPattiPlayer;
   amount: number;
 }
 
@@ -14,8 +14,8 @@ export function usePlaceTeenPattiBet() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: ({ roundId, selectedHandType, amount }: PlaceTeenPattiBetParams) =>
-      api.post<TeenPattiBet>("/teenpatti/bets", { roundId, selectedHandType, amount }),
+    mutationFn: ({ roundId, selectedPlayer, amount }: PlaceTeenPattiBetParams) =>
+      api.post<TeenPattiBet>("/teenpatti/bets", { roundId, selectedPlayer, amount }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["wallet", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["my-teenpatti-bet", variables.roundId, user?.id] });

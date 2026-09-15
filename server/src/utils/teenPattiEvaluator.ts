@@ -55,6 +55,81 @@ export function evaluateHand(cards: [Card, Card, Card]): HandType {
   return "highCard";
 }
 
+// Strength order, weakest to strongest — matches standard Teen Patti hand
+// rankings. Used both to compare two different hand types and (via its
+// numeric value) as the first element of a lexicographic comparison.
+export const HAND_TYPE_RANK: Record<HandType, number> = {
+  highCard: 1,
+  pair: 2,
+  color: 3,
+  sequence: 4,
+  pureSequence: 5,
+  trail: 6,
+};
+
+function sortedRanksDesc(cards: [Card, Card, Card]): [number, number, number] {
+  const ranks = cards.map((c) => c.rank);
+  ranks.sort((a, b) => b - a);
+  return ranks as [number, number, number];
+}
+
+/** The rank a sequence is compared by — the ace-low run (A-2-3) is the one exception, always the *lowest* sequence regardless of the ace's numeric value. */
+function sequenceTopRank(cards: [Card, Card, Card]): number {
+  const ranks = [...cards.map((c) => c.rank)].sort((a, b) => a - b);
+  const isAceLow = ranks[0] === 2 && ranks[1] === 3 && ranks[2] === 14;
+  return isAceLow ? 3 : ranks[2];
+}
+
+/**
+ * A tuple of numbers that fully determines how strong a hand is *within*
+ * its own hand type — compared lexicographically (first difference wins).
+ *   trail:                  [triplet rank]
+ *   pureSequence/sequence:  [top rank of the run]
+ *   color/highCard:         [highest, middle, lowest] (like a poker flush)
+ *   pair:                   [pair rank, kicker rank]
+ */
+function handStrengthKey(cards: [Card, Card, Card], handType: HandType): number[] {
+  switch (handType) {
+    case "trail":
+      return [cards[0].rank];
+    case "pureSequence":
+    case "sequence":
+      return [sequenceTopRank(cards)];
+    case "color":
+    case "highCard":
+      return sortedRanksDesc(cards);
+    case "pair": {
+      const [r0, r1, r2] = sortedRanksDesc(cards);
+      return r0 === r1 ? [r0, r2] : [r1, r0];
+    }
+  }
+}
+
+/**
+ * Compares two 3-card hands per standard Teen Patti rules: hand type first
+ * (trail beats pure sequence beats sequence beats color beats pair beats
+ * high card), then the appropriate within-type tiebreak. Returns positive
+ * if `a` is stronger, negative if `b` is stronger, 0 for a genuine tie —
+ * which can legitimately happen (e.g. both hands are a pair of Kings with
+ * the same kicker rank, just built from different suits) since both hands
+ * are dealt from a single shared deck, exactly like a real Teen Patti table.
+ */
+export function compareHands(a: [Card, Card, Card], b: [Card, Card, Card]): number {
+  const typeA = evaluateHand(a);
+  const typeB = evaluateHand(b);
+
+  if (HAND_TYPE_RANK[typeA] !== HAND_TYPE_RANK[typeB]) {
+    return HAND_TYPE_RANK[typeA] - HAND_TYPE_RANK[typeB];
+  }
+
+  const keyA = handStrengthKey(a, typeA);
+  const keyB = handStrengthKey(b, typeB);
+  for (let i = 0; i < keyA.length; i++) {
+    if (keyA[i] !== keyB[i]) return keyA[i] - keyB[i];
+  }
+  return 0;
+}
+
 const RANK_LABELS: Record<Rank, string> = {
   2: "2",
   3: "3",

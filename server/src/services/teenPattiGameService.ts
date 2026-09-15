@@ -1,17 +1,17 @@
 import { randomInt } from "node:crypto";
 import mongoose from "mongoose";
-import { TeenPattiRound } from "../models/TeenPattiRound.js";
-import { TeenPattiBet } from "../models/TeenPattiBet.js";
+import { TeenPattiRound, type TeenPattiWinner } from "../models/TeenPattiRound.js";
+import { TeenPattiBet, type TeenPattiPlayer } from "../models/TeenPattiBet.js";
 import { Wallet } from "../models/Wallet.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
 import { GameSettings, GAME_SETTINGS_ID } from "../models/GameSettings.js";
 import { HttpError } from "../utils/asyncHandler.js";
-import { buildDeck, evaluateHand, type Card, type HandType } from "../utils/teenPattiEvaluator.js";
+import { buildDeck, compareHands, evaluateHand, type Card } from "../utils/teenPattiEvaluator.js";
 import {
   BETTING_DURATION_SECONDS,
   ROUND_DURATION_SECONDS,
   STAKE_AMOUNTS,
-  TEEN_PATTI_MULTIPLIERS,
+  TEEN_PATTI_PAYOUT_MULTIPLIER,
 } from "../config/constants.js";
 
 // ---------------------------------------------------------------------------
@@ -57,28 +57,34 @@ export async function getTeenPattiGameState() {
 }
 
 // ---------------------------------------------------------------------------
-// dealCards(): 3 distinct cards drawn from a full 52-card deck via a partial
-// Fisher-Yates shuffle using Node's CSPRNG (crypto.randomInt) — same
-// fairness pattern as the dice roll / color pick: generated once, here,
-// only after betting has closed, with no way for the client to influence
-// or predict it.
+// dealTwoHands(): 6 distinct cards drawn from a full 52-card deck via a
+// partial Fisher-Yates shuffle using Node's CSPRNG (crypto.randomInt) — the
+// first 3 go to Player A (the user), the next 3 to Player B (the
+// computer), from one shared shuffle exactly like a real Teen Patti table.
+// Same fairness pattern as the dice roll / color pick: generated once,
+// here, only after betting has closed, with no way for the client to
+// influence or predict it.
 // ---------------------------------------------------------------------------
 
-function dealCards(): [Card, Card, Card] {
+function dealTwoHands(): { playerA: [Card, Card, Card]; playerB: [Card, Card, Card] } {
   const deck = buildDeck();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 6; i++) {
     const j = i + randomInt(0, deck.length - i);
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
-  return [deck[0], deck[1], deck[2]];
+  return {
+    playerA: [deck[0], deck[1], deck[2]],
+    playerB: [deck[3], deck[4], deck[5]],
+  };
 }
 
 // ---------------------------------------------------------------------------
 // placeTeenPattiBet(): mirrors gameService.placeBet() / colorGameService
-// .placeColorBet() exactly, for a 6-way hand-type pick instead of 2-/3-way.
+// .placeColorBet() exactly, for a Player A / Player B pick instead of
+// odd/even or red/green.
 // ---------------------------------------------------------------------------
 
-export async function placeTeenPattiBet(userId: string, roundId: string, selectedHandType: HandType, amount: number) {
+export async function placeTeenPattiBet(userId: string, roundId: string, selectedPlayer: TeenPattiPlayer, amount: number) {
   if (!STAKE_AMOUNTS.includes(amount as (typeof STAKE_AMOUNTS)[number])) {
     throw new HttpError(400, `Stake must be one of ${STAKE_AMOUNTS.join(", ")}`);
   }
@@ -107,7 +113,7 @@ export async function placeTeenPattiBet(userId: string, roundId: string, selecte
 
       try {
         [createdBet] = await TeenPattiBet.create(
-          [{ userId, roundId, selectedHandType, amount, status: "pending" }],
+          [{ userId, roundId, selectedPlayer, amount, status: "pending" }],
           { session },
         );
       } catch (err) {
@@ -148,9 +154,15 @@ export async function placeTeenPattiBet(userId: string, roundId: string, selecte
 }
 
 // ---------------------------------------------------------------------------
-// settleTeenPattiRound(): deals 3 cards exactly once, classifies the hand,
-// and settles every pending bet. Idempotent. Not exposed over HTTP — only
-// the scheduler calls it.
+// settleTeenPattiRound(): deals both hands exactly once, determines the
+// winner, and settles every pending bet. Idempotent. Not exposed over
+// HTTP — only the scheduler calls it.
+//
+// A tie refunds every pending bet in full rather than picking an arbitrary
+// "winner" — the predefined tie rule the feature calls for. This isn't a
+// loophole: paired with the flat TEEN_PATTI_PAYOUT_MULTIPLIER on real wins,
+// it keeps the game exactly fair in expectation regardless of how often
+// ties actually occur (see the derivation in config/constants.ts).
 // ---------------------------------------------------------------------------
 
 export async function settleTeenPattiRound(roundId: string) {
@@ -166,20 +178,54 @@ export async function settleTeenPattiRound(roundId: string) {
         throw new Error("Betting deadline has not passed yet");
       }
 
-      const cards = dealCards();
-      const winningHandType = evaluateHand(cards);
+      const { playerA, playerB } = dealTwoHands();
+      const playerAHandType = evaluateHand(playerA);
+      const playerBHandType = evaluateHand(playerB);
+      const comparison = compareHands(playerA, playerB);
+      const winner: TeenPattiWinner = comparison > 0 ? "playerA" : comparison < 0 ? "playerB" : "tie";
 
       round.status = "completed";
-      round.cards.splice(0, round.cards.length, ...cards);
-      round.winningHandType = winningHandType;
+      round.playerACards.splice(0, round.playerACards.length, ...playerA);
+      round.playerBCards.splice(0, round.playerBCards.length, ...playerB);
+      round.playerAHandType = playerAHandType;
+      round.playerBHandType = playerBHandType;
+      round.winner = winner;
       round.completedAt = new Date();
       await round.save({ session });
 
       const pendingBets = await TeenPattiBet.find({ roundId: round._id, status: "pending" }).session(session);
 
       for (const bet of pendingBets) {
-        if (bet.selectedHandType === winningHandType) {
-          const payout = bet.amount * TEEN_PATTI_MULTIPLIERS[winningHandType];
+        if (winner === "tie") {
+          const wallet = await Wallet.findOne({ userId: bet.userId }).session(session);
+          if (!wallet) throw new Error(`Wallet not found for user ${bet.userId}`);
+
+          const updatedWallet = await Wallet.findOneAndUpdate(
+            { _id: wallet._id },
+            { $inc: { balance: bet.amount } },
+            { session, new: true },
+          );
+
+          await WalletTransaction.create(
+            [
+              {
+                userId: bet.userId,
+                walletId: wallet._id,
+                transactionType: "refund",
+                amount: bet.amount,
+                balanceBefore: wallet.balance,
+                balanceAfter: updatedWallet!.balance,
+                referenceId: bet._id,
+                description: `Refund for tied round #${round.roundNumber}`,
+              },
+            ],
+            { session },
+          );
+
+          bet.status = "refunded";
+          bet.payoutAmount = 0;
+        } else if (bet.selectedPlayer === winner) {
+          const payout = bet.amount * TEEN_PATTI_PAYOUT_MULTIPLIER;
 
           const wallet = await Wallet.findOne({ userId: bet.userId }).session(session);
           if (!wallet) throw new Error(`Wallet not found for winning user ${bet.userId}`);

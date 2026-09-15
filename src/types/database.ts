@@ -107,6 +107,10 @@ export type TeenPattiRoundStatus = "betting" | "completed" | "cancelled";
 
 export type HandType = "highCard" | "pair" | "color" | "sequence" | "pureSequence" | "trail";
 
+export type TeenPattiPlayer = "playerA" | "playerB";
+
+export type TeenPattiWinner = TeenPattiPlayer | "tie";
+
 export interface PlayingCard {
   rank: string;
   suit: "♠" | "♥" | "♦" | "♣";
@@ -119,8 +123,11 @@ export interface TeenPattiRound {
   betting_start_time: string;
   betting_end_time: string;
   result_time: string;
-  cards: PlayingCard[];
-  winning_hand_type: HandType | null;
+  player_a_cards: PlayingCard[];
+  player_b_cards: PlayingCard[];
+  player_a_hand_type: HandType | null;
+  player_b_hand_type: HandType | null;
+  winner: TeenPattiWinner | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -129,7 +136,7 @@ export interface TeenPattiBet {
   id: string;
   user_id: string;
   round_id: string;
-  selected_hand_type: HandType;
+  selected_player: TeenPattiPlayer;
   amount: number;
   status: BetStatus;
   payout_amount: number;

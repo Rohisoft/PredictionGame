@@ -40,7 +40,7 @@ export const placeColorBetSchema = z.object({
 
 export const placeTeenPattiBetSchema = z.object({
   roundId: z.string().min(1),
-  selectedHandType: z.enum(["highCard", "pair", "color", "sequence", "pureSequence", "trail"]),
+  selectedPlayer: z.enum(["playerA", "playerB"]),
   amount: z.number().refine((v) => STAKE_AMOUNTS.includes(v as (typeof STAKE_AMOUNTS)[number])),
 });
 

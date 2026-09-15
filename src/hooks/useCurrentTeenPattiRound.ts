@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
-import type { HandType, TeenPattiRound } from "@/types/database";
+import type { TeenPattiPlayer, TeenPattiRound } from "@/types/database";
 
 export function useCurrentTeenPattiRound() {
   return useQuery({
@@ -37,9 +37,9 @@ export function useTeenPattiRoundById(roundId: string | null) {
   });
 }
 
-export type TeenPattiRoundBetStats = Record<HandType, { count: number; total: number }>;
+export type TeenPattiRoundBetStats = Record<TeenPattiPlayer, { count: number; total: number }>;
 
-/** How many players bet on each hand type, and how many points total — superadmin only. */
+/** How many players bet on each side, and how many points total — superadmin only. */
 export function useTeenPattiRoundBetStats(roundId: string | null) {
   return useQuery({
     queryKey: ["teenpatti-round-bet-stats", roundId],

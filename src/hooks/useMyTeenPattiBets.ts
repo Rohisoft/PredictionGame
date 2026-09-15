@@ -4,7 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import type { TeenPattiBet, TeenPattiRound } from "@/types/database";
 
 export type TeenPattiBetWithRound = TeenPattiBet & {
-  teen_patti_rounds: Pick<TeenPattiRound, "round_number" | "cards" | "winning_hand_type" | "status" | "completed_at"> | null;
+  teen_patti_rounds: Pick<
+    TeenPattiRound,
+    "round_number" | "player_a_cards" | "player_b_cards" | "player_a_hand_type" | "player_b_hand_type" | "winner" | "status" | "completed_at"
+  > | null;
 };
 
 export function useMyTeenPattiBetForRound(roundId: string | undefined) {

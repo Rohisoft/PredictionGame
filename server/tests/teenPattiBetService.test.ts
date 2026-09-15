@@ -4,7 +4,6 @@ import { User } from "../src/models/User.js";
 import { Wallet } from "../src/models/Wallet.js";
 import { TeenPattiBet } from "../src/models/TeenPattiBet.js";
 import { TeenPattiRound } from "../src/models/TeenPattiRound.js";
-import { HAND_TYPES } from "../src/utils/teenPattiEvaluator.js";
 import { getTeenPattiRoundBetStats } from "../src/services/teenPattiBetService.js";
 
 async function makeUser() {
@@ -24,27 +23,22 @@ function makeRoundTimes() {
 }
 
 describe("getTeenPattiRoundBetStats", () => {
-  it("returns zero counts/totals for all 6 hand types when nobody has bet", async () => {
+  it("returns zero counts/totals for both players when nobody has bet", async () => {
     const round = await TeenPattiRound.create({ roundNumber: 1, status: "betting", ...makeRoundTimes() });
     const stats = await getTeenPattiRoundBetStats(round._id.toString());
-
-    expect(Object.keys(stats).sort()).toEqual([...HAND_TYPES].sort());
-    for (const handType of HAND_TYPES) {
-      expect(stats[handType]).toEqual({ count: 0, total: 0 });
-    }
+    expect(stats).toEqual({ playerA: { count: 0, total: 0 }, playerB: { count: 0, total: 0 } });
   });
 
-  it("aggregates player count and total points per hand type", async () => {
+  it("aggregates player count and total points per side", async () => {
     const round = await TeenPattiRound.create({ roundNumber: 2, status: "betting", ...makeRoundTimes() });
     const [a, b, c] = await Promise.all([makeUser(), makeUser(), makeUser()]);
 
-    await TeenPattiBet.create({ userId: a._id, roundId: round._id, selectedHandType: "highCard", amount: 20, status: "pending" });
-    await TeenPattiBet.create({ userId: b._id, roundId: round._id, selectedHandType: "highCard", amount: 50, status: "pending" });
-    await TeenPattiBet.create({ userId: c._id, roundId: round._id, selectedHandType: "trail", amount: 10, status: "pending" });
+    await TeenPattiBet.create({ userId: a._id, roundId: round._id, selectedPlayer: "playerA", amount: 20, status: "pending" });
+    await TeenPattiBet.create({ userId: b._id, roundId: round._id, selectedPlayer: "playerA", amount: 50, status: "pending" });
+    await TeenPattiBet.create({ userId: c._id, roundId: round._id, selectedPlayer: "playerB", amount: 10, status: "pending" });
 
     const stats = await getTeenPattiRoundBetStats(round._id.toString());
-    expect(stats.highCard).toEqual({ count: 2, total: 70 });
-    expect(stats.trail).toEqual({ count: 1, total: 10 });
-    expect(stats.pair).toEqual({ count: 0, total: 0 });
+    expect(stats.playerA).toEqual({ count: 2, total: 70 });
+    expect(stats.playerB).toEqual({ count: 1, total: 10 });
   });
 });

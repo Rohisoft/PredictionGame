@@ -11,8 +11,8 @@ teenPattiBetsRouter.post(
   "/",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { roundId, selectedHandType, amount } = placeTeenPattiBetSchema.parse(req.body);
-    const bet = await placeTeenPattiBet(req.userId!, roundId, selectedHandType, amount);
+    const { roundId, selectedPlayer, amount } = placeTeenPattiBetSchema.parse(req.body);
+    const bet = await placeTeenPattiBet(req.userId!, roundId, selectedPlayer, amount);
     res.status(201).json(bet);
   }),
 );

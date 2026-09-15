@@ -7,7 +7,7 @@ import { TeenPattiRound } from "../src/models/TeenPattiRound.js";
 import { WalletTransaction } from "../src/models/WalletTransaction.js";
 import { GameSettings, GAME_SETTINGS_ID } from "../src/models/GameSettings.js";
 import { HAND_TYPES } from "../src/utils/teenPattiEvaluator.js";
-import { TEEN_PATTI_MULTIPLIERS } from "../src/config/constants.js";
+import { TEEN_PATTI_PAYOUT_MULTIPLIER } from "../src/config/constants.js";
 import {
   isTeenPattiEnabled,
   placeTeenPattiBet,
@@ -37,7 +37,7 @@ describe("placeTeenPattiBet", () => {
     const { user } = await makeUserWithWallet();
     const round = await TeenPattiRound.create({ roundNumber: 1, status: "betting", ...makeRoundTimes(50_000) });
 
-    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "pair", 15)).rejects.toThrow(
+    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "playerA", 15)).rejects.toThrow(
       /Stake must be one of/,
     );
   });
@@ -46,7 +46,7 @@ describe("placeTeenPattiBet", () => {
     const { user, wallet } = await makeUserWithWallet(100);
     const round = await TeenPattiRound.create({ roundNumber: 2, status: "betting", ...makeRoundTimes(50_000) });
 
-    const bet = await placeTeenPattiBet(user._id.toString(), round._id.toString(), "highCard", 20);
+    const bet = await placeTeenPattiBet(user._id.toString(), round._id.toString(), "playerB", 20);
     expect(bet?.status).toBe("pending");
 
     const updatedWallet = await Wallet.findById(wallet._id);
@@ -57,8 +57,8 @@ describe("placeTeenPattiBet", () => {
     const { user } = await makeUserWithWallet(100);
     const round = await TeenPattiRound.create({ roundNumber: 3, status: "betting", ...makeRoundTimes(50_000) });
 
-    await placeTeenPattiBet(user._id.toString(), round._id.toString(), "pair", 20);
-    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "color", 10)).rejects.toThrow(
+    await placeTeenPattiBet(user._id.toString(), round._id.toString(), "playerA", 20);
+    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "playerB", 10)).rejects.toThrow(
       /already made a prediction/,
     );
   });
@@ -67,7 +67,7 @@ describe("placeTeenPattiBet", () => {
     const { user } = await makeUserWithWallet(100);
     const round = await TeenPattiRound.create({ roundNumber: 4, status: "betting", ...makeRoundTimes(-1_000) });
 
-    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "pair", 10)).rejects.toThrow(
+    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "playerA", 10)).rejects.toThrow(
       /Predictions are closed/,
     );
   });
@@ -76,7 +76,7 @@ describe("placeTeenPattiBet", () => {
     const { user } = await makeUserWithWallet(5);
     const round = await TeenPattiRound.create({ roundNumber: 5, status: "betting", ...makeRoundTimes(50_000) });
 
-    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "pair", 10)).rejects.toThrow(
+    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "playerA", 10)).rejects.toThrow(
       /Insufficient balance/,
     );
   });
@@ -86,7 +86,7 @@ describe("placeTeenPattiBet", () => {
     const round = await TeenPattiRound.create({ roundNumber: 6, status: "betting", ...makeRoundTimes(50_000) });
 
     await setTeenPattiEnabled(false);
-    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "pair", 10)).rejects.toThrow(
+    await expect(placeTeenPattiBet(user._id.toString(), round._id.toString(), "playerA", 10)).rejects.toThrow(
       /currently disabled/,
     );
     await setTeenPattiEnabled(true);
@@ -94,70 +94,67 @@ describe("placeTeenPattiBet", () => {
 });
 
 describe("settleTeenPattiRound", () => {
-  it("pays exactly the bet(s) matching the dealt hand type its fair multiplier, and nothing to the rest", async () => {
-    // Bet every one of the 6 hand types on the same round — whichever hand
-    // actually gets dealt, exactly one of these bets must win.
-    const round = await TeenPattiRound.create({ roundNumber: 7, status: "betting", ...makeRoundTimes(-1_000) });
-    const entries = await Promise.all(
-      HAND_TYPES.map(async (handType) => {
-        const { user, wallet } = await makeUserWithWallet(100);
-        const bet = await TeenPattiBet.create({
-          userId: user._id,
-          roundId: round._id,
-          selectedHandType: handType,
-          amount: 50,
-          status: "pending",
-        });
-        return { handType, user, wallet, bet };
-      }),
-    );
+  it("deals both hands, picks a winner (or a tie), and settles both sides' bets correctly", async () => {
+    const round = await TeenPattiRound.create({ roundNumber: 7, status: "betting", ...makeRoundTimes(50_000) });
+
+    const { user: userA, wallet: walletA } = await makeUserWithWallet(100);
+    const { user: userB, wallet: walletB } = await makeUserWithWallet(100);
+    await placeTeenPattiBet(userA._id.toString(), round._id.toString(), "playerA", 50);
+    await placeTeenPattiBet(userB._id.toString(), round._id.toString(), "playerB", 50);
+
+    // Fast-forward the round's own deadline so settlement is allowed, same
+    // trick used throughout: mutate the already-created document directly.
+    await TeenPattiRound.updateOne({ _id: round._id }, { bettingEndTime: new Date(Date.now() - 1_000) });
 
     await settleTeenPattiRound(round._id.toString());
 
     const settledRound = await TeenPattiRound.findById(round._id);
     expect(settledRound?.status).toBe("completed");
-    expect(settledRound?.cards).toHaveLength(3);
-    expect(HAND_TYPES).toContain(settledRound?.winningHandType);
+    expect(settledRound?.playerACards).toHaveLength(3);
+    expect(settledRound?.playerBCards).toHaveLength(3);
+    expect(HAND_TYPES).toContain(settledRound?.playerAHandType);
+    expect(HAND_TYPES).toContain(settledRound?.playerBHandType);
+    expect(["playerA", "playerB", "tie"]).toContain(settledRound?.winner);
 
-    const winningHandType = settledRound!.winningHandType!;
-    let winners = 0;
+    const refreshedWalletA = await Wallet.findById(walletA._id);
+    const refreshedWalletB = await Wallet.findById(walletB._id);
 
-    for (const entry of entries) {
-      const refreshedBet = await TeenPattiBet.findById(entry.bet._id);
-      const refreshedWallet = await Wallet.findById(entry.wallet._id);
-
-      if (entry.handType === winningHandType) {
-        winners++;
-        const expectedPayout = 50 * TEEN_PATTI_MULTIPLIERS[winningHandType];
-        expect(refreshedBet?.status).toBe("won");
-        expect(refreshedBet?.payoutAmount).toBe(expectedPayout);
-        expect(refreshedWallet?.balance).toBe(100 + expectedPayout);
-      } else {
-        expect(refreshedBet?.status).toBe("lost");
-        expect(refreshedBet?.payoutAmount).toBe(0);
-        expect(refreshedWallet?.balance).toBe(100);
-      }
+    if (settledRound!.winner === "playerA") {
+      expect(refreshedWalletA?.balance).toBe(50 + 50 * TEEN_PATTI_PAYOUT_MULTIPLIER);
+      expect(refreshedWalletB?.balance).toBe(50);
+    } else if (settledRound!.winner === "playerB") {
+      expect(refreshedWalletB?.balance).toBe(50 + 50 * TEEN_PATTI_PAYOUT_MULTIPLIER);
+      expect(refreshedWalletA?.balance).toBe(50);
+    } else {
+      // Tie — both bets refunded in full, back to their pre-bet balance.
+      expect(refreshedWalletA?.balance).toBe(100);
+      expect(refreshedWalletB?.balance).toBe(100);
     }
-
-    expect(winners).toBe(1);
   });
 
-  it("is idempotent — settling an already-completed round twice does not double-pay", async () => {
+  it("is idempotent — settling an already-completed round twice doesn't change the outcome again", async () => {
     const { user } = await makeUserWithWallet(100);
     const round = await TeenPattiRound.create({ roundNumber: 8, status: "betting", ...makeRoundTimes(-1_000) });
     await TeenPattiBet.create({
       userId: user._id,
       roundId: round._id,
-      selectedHandType: "highCard",
+      selectedPlayer: "playerA",
       amount: 50,
       status: "pending",
     });
 
     await settleTeenPattiRound(round._id.toString());
-    await settleTeenPattiRound(round._id.toString());
+    const wallet = await Wallet.findOne({ userId: user._id });
+    const balanceAfterFirstSettle = wallet!.balance;
 
-    const payoutTransactions = await WalletTransaction.countDocuments({ transactionType: "payout" });
-    expect(payoutTransactions).toBeLessThanOrEqual(1);
+    await settleTeenPattiRound(round._id.toString());
+    const walletAfterSecond = await Wallet.findOne({ userId: user._id });
+    expect(walletAfterSecond?.balance).toBe(balanceAfterFirstSettle);
+
+    const settlementTransactions = await WalletTransaction.countDocuments({
+      transactionType: { $in: ["payout", "refund"] },
+    });
+    expect(settlementTransactions).toBeLessThanOrEqual(1);
   });
 
   it("rejects settling before the betting deadline has passed", async () => {

@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TeenPattiRoundBetStats } from "@/hooks/useCurrentTeenPattiRound";
-import { HAND_TYPE_INFO, HAND_TYPE_ORDER } from "@/types/teenPatti";
+import { PLAYER_INFO } from "@/types/teenPatti";
+import type { TeenPattiPlayer } from "@/types/database";
 import { formatPoints } from "@/lib/utils";
+
+const PLAYER_ORDER: TeenPattiPlayer[] = ["playerA", "playerB"];
 
 interface TeenPattiPoolCardProps {
   stats: TeenPattiRoundBetStats | undefined;
@@ -17,15 +20,14 @@ export function TeenPattiPoolCard({ stats, isLoading }: TeenPattiPoolCardProps) 
           <CardTitle>Betting pool</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-full" />
-          ))}
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
     );
   }
 
-  const totalPts = HAND_TYPE_ORDER.reduce((sum, handType) => sum + stats[handType].total, 0);
+  const totalPts = PLAYER_ORDER.reduce((sum, player) => sum + stats[player].total, 0);
 
   return (
     <Card>
@@ -33,13 +35,13 @@ export function TeenPattiPoolCard({ stats, isLoading }: TeenPattiPoolCardProps) 
         <CardTitle>Betting pool</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {HAND_TYPE_ORDER.map((handType) => {
-          const { count, total } = stats[handType];
-          const share = totalPts > 0 ? (total / totalPts) * 100 : 0;
+        {PLAYER_ORDER.map((player) => {
+          const { count, total } = stats[player];
+          const share = totalPts > 0 ? (total / totalPts) * 100 : 50;
           return (
-            <div key={handType} className="space-y-1.5">
+            <div key={player} className="space-y-1.5">
               <div className="flex items-baseline justify-between text-sm">
-                <span className="font-medium">{HAND_TYPE_INFO[handType].label}</span>
+                <span className="font-medium">{PLAYER_INFO[player].label}</span>
                 <span className="text-muted-foreground">
                   {count} {count === 1 ? "player" : "players"} · {formatPoints(total)} pts
                 </span>
