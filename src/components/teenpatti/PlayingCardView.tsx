@@ -13,7 +13,7 @@ export function PlayingCardView({ card, faceDown, winning, className }: PlayingC
   const isRed = card?.suit === "♥" || card?.suit === "♦";
 
   return (
-    <div className={cn("h-16 w-11 shrink-0 [perspective:600px] sm:h-20 sm:w-14", className)}>
+    <div className={cn("h-14 w-9 shrink-0 [perspective:600px] sm:h-20 sm:w-14", className)}>
       <div
         className={cn(
           "relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d]",
